@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分帳小幫手</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <!-- 引入 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 pb-12">
+
+    <div id="app" v-cloak>
+        
+        <!-- 載入中狀態遮罩 -->
+        <div v-if="isCheckingAuth" class="min-h-screen flex items-center justify-center flex-col">
+            <svg class="animate-spin h-10 w-10 text-indigo-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p class="mt-4 text-gray-500 font-medium tracking-wide">系統安全驗證中...</p>
+        </div>
+
+        <!-- 系統主體 (通過驗證後顯示) -->
+        <div v-else>
+            <!-- 頂部導覽列 -->
+            <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+                <div class="max-w-4xl mx-auto px-4 md:px-8 py-3 flex justify-between items-center">
+                    <div class="flex items-center gap-6">
+                        <div class="font-bold text-indigo-700 text-lg flex items-center gap-2">💰 分帳小幫手</div>
+                        <div class="flex gap-2">
+                            <button @click="currentPage = 'home'" :class="['px-3 py-1.5 rounded-lg text-sm font-medium transition', currentPage === 'home' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-50']">當前活動編輯</button>
+                            <button @click="goToHistory" :class="['px-3 py-1.5 rounded-lg text-sm font-medium transition', currentPage === 'history' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-50']">歷史紀錄總覽</button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <template v-if="currentUser">
+                            <div class="flex items-center gap-2">
+                                <img :src="currentUser.photoURL" class="w-8 h-8 rounded-full border border-gray-200">
+                                <span class="text-sm text-gray-600 hidden md:inline">{{ currentUser.displayName }}</span>
+                            </div>
+                            <button @click="handleSignOut" class="text-sm text-red-500 hover:text-red-700 font-medium">登出</button>
+                        </template>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="max-w-4xl mx-auto space-y-6 mt-6 px-4 md:px-8">
+                
+                <!-- ====== 當前分帳頁面 (Home) ====== -->
+                <div v-show="currentPage === 'home'">
+                    <!-- 標題區 -->
+                    <header class="text-center py-6 block">
+                        <h1 class="text-4xl font-bold text-indigo-700 tracking-tight flex justify-center items-center gap-2">
+                            <input 
+                                v-model.trim="eventTitle" 
+                                placeholder="請在此輸入活動主題 (如：日本之旅)" 
+                                class="bg-transparent border-b-2 border-indigo-200 focus:border-indigo-600 focus:outline-none text-center px-2 py-1 flex-1 max-w-sm transition-colors text-indigo-700 placeholder-indigo-300" 
+                                maxlength="30"
+                            >
+                        </h1>
+                        <p class="text-gray-500 mt-2">輸入本活動的夥伴與花費，自動算出最佳轉帳路徑</p>
+                    </header>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 左方：輸入區 -->
+                        <div class="space-y-6">
+                            
+                            <!-- 區塊 1：參與者管理 -->
+                            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                                <h2 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+                                    <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex justify-center items-center mr-2 text-sm">1</span>
+                                    同行夥伴
+                                </h2>
+                                
+                                <form @submit.prevent="addPerson" class="flex gap-2 mb-4">
+                                    <input 
+                                        v-model.trim="newPersonName" 
+                                        type="text" 
+                                        placeholder="輸入名字 (例如：小明)" 
+                                        required
+                                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                                    >
+                                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">
+                                        新增
+                                    </button>
+                                </form>
+
+                                <ul class="flex flex-wrap gap-2">
+                                    <li v-for="person in persons" :key="person.id" 
+                                        class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-sm flex items-center shadow-sm border border-indigo-100">
+                                        {{ person.name }}
+                                        <button @click="removePerson(person.id)" class="ml-2 text-indigo-400 hover:text-red-500 transition font-bold">
+                                            &times;
+                                        </button>
+                                    </li>
+                                </ul>
+                                <p v-if="persons.length === 0" class="text-gray-400 text-sm italic mt-2">請先新增同行夥伴</p>
+                            </section>
+
+                            <!-- 區塊 2：新增花費 -->
+                            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                                <h2 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+                                    <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex justify-center items-center mr-2 text-sm">2</span>
+                                    新增花費
+                                </h2>
+
+                                <form @submit.prevent="addExpense" class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600 mb-1">付款人</label>
+                                        <select 
+                                            v-model="newExpense.payerId" 
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                            :disabled="persons.length === 0"
+                                        >
+                                            <option value="" disabled>請選擇是誰付的錢</option>
+                                            <option v-for="person in persons" :key="person.id" :value="person.id">
+                                                {{ person.name }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="flex gap-4">
+                                        <div class="flex-1">
+                                            <label class="block text-sm font-medium text-gray-600 mb-1">項目名稱</label>
+                                            <input 
+                                                v-model.trim="newExpense.description" 
+                                                type="text" 
+                                                placeholder="例如：晚餐、計程車" 
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            >
+                                        </div>
+                                        <div class="w-1/3">
+                                            <label class="block text-sm font-medium text-gray-600 mb-1">金額</label>
+                                            <input 
+                                                v-model.number="newExpense.amount" 
+                                                type="number" 
+                                                min="1"
+                                                placeholder="0" 
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            >
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600 mb-2">誰要分攤此筆花費？</label>
+                                        <div class="flex flex-wrap gap-3">
+                                            <label v-for="person in persons" :key="'inv-new-' + person.id" class="flex items-center cursor-pointer select-none bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition">
+                                                <input 
+                                                    type="checkbox" 
+                                                    :value="person.id" 
+                                                    v-model="newExpense.involvedPersonIds"
+                                                    class="w-4 h-4 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500"
+                                                >
+                                                <span class="ml-2 text-sm text-gray-700">{{ person.name }}</span>
+                                            </label>
+                                        </div>
+                                        <p v-if="newExpense.involvedPersonIds.length === 0" class="text-red-500 text-xs mt-1">請至少選擇一位分攤者</p>
+                                    </div>
+
+                                    <button 
+                                        type="submit" 
+                                        :disabled="persons.length === 0"
+                                        class="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg shadow-sm transition"
+                                    >
+                                        加入明細
+                                    </button>
+                                </form>
+                            </section>
+
+                        </div>
+
+                        <!-- 右方：結果區 -->
+                        <div class="space-y-6">
+                            
+                            <!-- 區塊 3：花費明細 -->
+                            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                                <h2 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+                                    <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex justify-center items-center mr-2 text-sm">3</span>
+                                    花費紀錄清單
+                                </h2>
+
+                                <div v-if="expenses.length === 0" class="text-center py-8 text-gray-400">
+                                    尚無花費紀錄，請由左方新增。
+                                </div>
+
+                                <ul v-else class="space-y-3 max-h-48 overflow-y-auto pr-2">
+                                    <li v-for="expense in expenses" :key="expense.id" class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                        <div>
+                                            <div class="font-medium text-gray-800">{{ expense.description }}</div>
+                                            <div class="text-sm text-gray-500">{{ getPersonName(expense.payerId) }} 先付了 <span class="font-semibold text-emerald-600">${{ expense.amount }}</span></div>
+                                            <div class="text-xs text-indigo-500 mt-1">
+                                                分攤者：
+                                                <span v-for="(pid, idx) in expense.involvedPersonIds" :key="'inv'+pid">
+                                                    {{ getPersonName(pid) }}<span v-if="idx < expense.involvedPersonIds.length - 1">, </span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button @click="removeExpense(expense.id)" class="text-gray-400 hover:text-red-500 p-2 transition">
+                                            刪除
+                                        </button>
+                                    </li>
+                                </ul>
+                                
+                                <div v-if="expenses.length > 0" class="mt-4 pt-4 border-t border-gray-100 flex justify-between font-bold text-gray-800 text-lg">
+                                    <span>總花費：</span>
+                                    <span>$ {{ totalAmount }}</span>
+                                </div>
+                            </section>
+
+                            <!-- 區塊 4：最終結算 -->
+                            <section class="bg-white rounded-2xl shadow-md border-t-4 border-indigo-500 p-6">
+                                <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
+                                    結算結果 (最佳化轉帳)
+                                </h2>
+
+                                <div v-if="persons.length < 2" class="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                    請至少新增兩位夥伴才能進行結算。
+                                </div>
+                                <div v-else-if="expenses.length === 0" class="text-sm text-gray-500 text-center py-4">
+                                    新增花費後，這裡會自動計算誰該給誰錢。
+                                </div>
+                                <div v-else-if="settlements.length === 0" class="text-sm text-emerald-600 bg-emerald-50 p-4 rounded-lg text-center font-medium">
+                                    🎉 大家互不相欠，帳目已平！
+                                </div>
+                                
+                                <ul v-else class="space-y-3 mb-6">
+                                    <li v-for="(settlement, index) in settlements" :key="index" class="flex items-center justify-between p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                                        <div class="flex items-center gap-3">
+                                            <span class="font-bold text-red-500">{{ settlement.from }}</span>
+                                            <span class="text-gray-400 text-sm">➡️ 轉給 ➡️</span>
+                                            <span class="font-bold text-emerald-600">{{ settlement.to }}</span>
+                                        </div>
+                                        <span class="font-bold text-gray-800 text-lg">$ {{ settlement.amount }}</span>
+                                    </li>
+                                </ul>
+
+                                <!-- 雲端儲存按鈕 -->
+                                <button 
+                                    v-if="persons.length >= 2 && expenses.length > 0"
+                                    @click="saveToFirebase" 
+                                    :disabled="isSaving"
+                                    class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition flex justify-center items-center gap-2"
+                                >
+                                    <svg v-if="isSaving" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    💾 儲存歷史紀錄至雲端
+                                </button>
+                            </section>
+
+                        </div>
+                    </div>
+                </div> <!-- End of Home View -->
+
+
+                <!-- ====== 歷史紀錄頁面 (History) ====== -->
+                <div v-show="currentPage === 'history'" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 min-h-[50vh]">
+                    <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                        <h2 class="text-2xl font-bold text-gray-800 tracking-tight">歷史分帳紀錄</h2>
+                        <div class="flex gap-4">
+                            <button @click="loadHistory" class="text-gray-500 hover:text-indigo-600 text-sm font-medium flex items-center gap-1 transition">
+                                🔄 重新載入
+                            </button>
+                            <button @click="createNewEvent" class="bg-emerald-500 hover:bg-emerald-600 shadow-sm hover:shadow text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2">
+                                ➕ 新增活動
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div v-if="isLoadingHistory" class="text-center py-10 text-gray-500">
+                        載入中...
+                    </div>
+                    <div v-else-if="historyList.length === 0" class="text-center py-10 text-gray-400">
+                        目前沒有任何歷史紀錄喔！請先在分帳頁面中建立並儲存。
+                    </div>
+                    
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div v-for="docItem in historyList" :key="docItem.id" class="border border-gray-200 rounded-xl p-4 hover:border-indigo-300 transition group bg-white shadow-sm hover:shadow">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-lg text-gray-800">{{ docItem.title || '未命名活動' }}</h3>
+                                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">{{ formatDate(docItem.createdAt) }}</span>
+                            </div>
+                            <div class="text-sm text-gray-600 mb-4 flex gap-4">
+                                <span>👥 {{ docItem.persons.length }} 人</span>
+                                <span>🧾 {{ docItem.expenses.length }} 筆明細</span>
+                                <span class="font-semibold text-emerald-600">總計 $ {{ docItem.totalAmount }}</span>
+                            </div>
+
+                            <!-- 歷史明細結算結果 -->
+                            <div v-if="docItem.settlements && docItem.settlements.length > 0" class="bg-indigo-50/50 border border-indigo-100 rounded-lg p-3 mb-4 space-y-1">
+                                <h4 class="text-xs font-bold text-gray-500 mb-2 tracking-wider">💰 分帳路徑</h4>
+                                <div v-for="(stl, stlIdx) in docItem.settlements" :key="'stl-'+stlIdx" class="text-sm flex justify-between items-center bg-white px-2 py-1.5 rounded shadow-sm">
+                                    <div><span class="text-red-500 font-medium">{{ stl.from }}</span> <span class="text-xs mx-1 text-gray-400">➡️</span> <span class="text-emerald-600 font-medium">{{ stl.to }}</span></div>
+                                    <div class="font-bold text-gray-700">${{ stl.amount }}</div>
+                                </div>
+                            </div>
+                            <div v-else-if="docItem.expenses && docItem.expenses.length > 0" class="bg-emerald-50 text-emerald-600 text-xs text-center border border-emerald-100 rounded-lg py-2 mb-4">
+                                🎉 帳目已平，互不相欠。
+                            </div>
+
+                            <button @click="restoreEvent(docItem)" class="w-full py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition">
+                                載入此紀錄並繼續編輯
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div> <!-- End of Auth Protected Area -->
+    </div>
+
+    <!-- Firebase SDK & Vue Logic -->
+    <script type="module">
+        import { auth, db } from './firebase-config.js';
+        import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+        import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // ====== 狀態：認證與導航 ======
+                const isCheckingAuth = ref(true);
+                const currentUser = ref(null);
+                const currentPage = ref('history'); // 'home' | 'history'
+
+                // ====== 狀態：當前分帳 ======
+                const eventTitle = ref('');
+                const persons = ref([
+                    { id: 1, name: 'Alice' },
+                    { id: 2, name: 'Bob' }
+                ]);
+                let personIdCounter = 3;
+                let expenseIdCounter = 1;
+                const newPersonName = ref('');
+                const expenses = ref([]);
+                const newExpense = ref({
+                    description: '',
+                    amount: null,
+                    payerId: '',
+                    involvedPersonIds: []
+                });
+                
+                // 初始化預設分攤者
+                newExpense.value.involvedPersonIds = persons.value.map(p => p.id);
+
+                // ====== 狀態：歷史區塊 ======
+                const isSaving = ref(false);
+                const historyList = ref([]);
+                const isLoadingHistory = ref(false);
+
+                // ====== 掛載 Firebase Auth 監聽 ======
+                onMounted(() => {
+                    if(!auth) {
+                        alert("設定檔錯誤");
+                        return;
+                    }
+                    onAuthStateChanged(auth, (user) => {
+                        if (!user) {
+                            // 未登入，強制踢回首頁
+                            window.location.href = './index.html';
+                        } else {
+                            currentUser.value = user;
+                            isCheckingAuth.value = false;
+                            
+                            // 若使用者直接刷新但留在 history，自動載入
+                            if (currentPage.value === 'history') {
+                                loadHistory();
+                            }
+                        }
+                    });
+                });
+
+                // ====== 認證邏輯 ======
+                const handleSignOut = async () => {
+                    if(!auth) return;
+                    try {
+                        await signOut(auth);
+                        // 登出後 onAuthStateChanged 監聽器會觸發並自動拋回 index.html
+                    } catch (error) {
+                        console.error('登出失敗:', error);
+                    }
+                };
+
+                const goToHistory = () => {
+                    currentPage.value = 'history';
+                    loadHistory();
+                };
+
+                const createNewEvent = () => {
+                    eventTitle.value = '';
+                    persons.value = [
+                        { id: 1, name: 'Alice' },
+                        { id: 2, name: 'Bob' }
+                    ];
+                    personIdCounter = 3;
+                    expenseIdCounter = 1;
+                    newPersonName.value = '';
+                    expenses.value = [];
+                    newExpense.value = {
+                        description: '',
+                        amount: null,
+                        payerId: '',
+                        involvedPersonIds: [1, 2]
+                    };
+                    currentPage.value = 'home';
+                };
+
+                // ====== 本地分帳邏輯 ======
+                const addPerson = () => {
+                    let name = newPersonName.value;
+                    if(name) name = name.trim();
+                    if (!name) return;
+                    if (persons.value.some(p => p.name === name)) {
+                        alert('此名稱已存在！');
+                        return;
+                    }
+                    const newId = personIdCounter++;
+                    persons.value.push({ id: newId, name });
+                    newPersonName.value = '';
+                    newExpense.value.involvedPersonIds.push(newId);
+                };
+
+                const removePerson = (id) => {
+                    if (expenses.value.some(e => e.payerId === id || e.involvedPersonIds.includes(id))) {
+                        alert('此人已包含在花費紀錄的付款或分攤中，請先刪除相關明細！');
+                        return;
+                    }
+                    persons.value = persons.value.filter(p => p.id !== id);
+                    if (newExpense.value.payerId === id) {
+                        newExpense.value.payerId = '';
+                    }
+                    newExpense.value.involvedPersonIds = newExpense.value.involvedPersonIds.filter(pid => pid !== id);
+                };
+
+                const addExpense = () => {
+                    if (!newExpense.value.payerId || !newExpense.value.description || !newExpense.value.amount) return;
+                    if (newExpense.value.involvedPersonIds.length === 0) {
+                        alert('防錯防護：請至少選擇一位分攤此筆花費的人！');
+                        return;
+                    }
+                    expenses.value.push({
+                        id: expenseIdCounter++,
+                        payerId: newExpense.value.payerId,
+                        description: newExpense.value.description,
+                        amount: newExpense.value.amount,
+                        involvedPersonIds: [...newExpense.value.involvedPersonIds]
+                    });
+                    newExpense.value.description = '';
+                    newExpense.value.amount = null;
+                };
+
+                const removeExpense = (id) => {
+                    expenses.value = expenses.value.filter(e => e.id !== id);
+                };
+
+                const getPersonName = (id) => {
+                    const person = persons.value.find(p => p.id === id);
+                    return person ? person.name : '未知';
+                };
+
+                const totalAmount = computed(() => {
+                    return expenses.value.reduce((sum, exp) => sum + exp.amount, 0);
+                });
+
+                const calcSettlements = (personsArray, expensesArray) => {
+                    if (!personsArray || personsArray.length === 0) return [];
+                    const balances = {};
+                    personsArray.forEach(p => balances[p.id] = 0);
+
+                    expensesArray.forEach(exp => {
+                        balances[exp.payerId] += exp.amount;
+                        const splitAmount = exp.amount / exp.involvedPersonIds.length;
+                        exp.involvedPersonIds.forEach(pid => {
+                            balances[pid] -= splitAmount;
+                        });
+                    });
+
+                    let debtors = [];
+                    let creditors = [];
+                    for (const [id, balance] of Object.entries(balances)) {
+                        if (balance < -0.01) debtors.push({ id: Number(id), amount: -balance });
+                        else if (balance > 0.01) creditors.push({ id: Number(id), amount: balance });
+                    }
+
+                    debtors.sort((a, b) => b.amount - a.amount);
+                    creditors.sort((a, b) => b.amount - a.amount);
+
+                    const results = [];
+                    let i = 0; let j = 0;
+
+                    const getName = (id) => {
+                        const p = personsArray.find(person => person.id === id);
+                        return p ? p.name : '未知';
+                    };
+
+                    while (i < debtors.length && j < creditors.length) {
+                        const debtor = debtors[i];
+                        const creditor = creditors[j];
+                        const amountToTransfer = Math.min(debtor.amount, creditor.amount);
+
+                        results.push({
+                            from: getName(debtor.id),
+                            to: getName(creditor.id),
+                            amount: Math.round(amountToTransfer)
+                        });
+
+                        debtor.amount -= amountToTransfer;
+                        creditor.amount -= amountToTransfer;
+                        if (debtor.amount < 0.01) i++;
+                        if (creditor.amount < 0.01) j++;
+                    }
+                    return results;
+                };
+
+                const settlements = computed(() => {
+                    return calcSettlements(persons.value, expenses.value);
+                });
+
+                // ====== 雲端資料庫邏輯 ======
+                const saveToFirebase = async () => {
+                    if(!db) { alert("請先設定 Firebase Config"); return; }
+                    
+                    const title = eventTitle.value || '未命名活動';
+                    if (!confirm(`確定要將「${title}」儲存至您的雲端歷史紀錄嗎？`)) return;
+
+                    isSaving.value = true;
+                    try {
+                        const userEventsRef = collection(db, `users/${currentUser.value.uid}/events`);
+                        await addDoc(userEventsRef, {
+                            title: title,
+                            persons: persons.value,
+                            expenses: expenses.value,
+                            totalAmount: totalAmount.value,
+                            createdAt: serverTimestamp()
+                        });
+                        alert('✅ 儲存成功！');
+                        goToHistory();
+                    } catch (error) {
+                        console.error('儲存失敗:', error);
+                        alert(`儲存失敗：${error.message}`);
+                    } finally {
+                        isSaving.value = false;
+                    }
+                };
+
+                const loadHistory = async () => {
+                    if (!db) return;
+                    isLoadingHistory.value = true;
+                    try {
+                        const userEventsRef = collection(db, `users/${currentUser.value.uid}/events`);
+                        const q = query(userEventsRef, orderBy('createdAt', 'desc'));
+                        const querySnapshot = await getDocs(q);
+                        
+                        historyList.value = querySnapshot.docs.map(doc => {
+                            const data = doc.data();
+                            return {
+                                id: doc.id,
+                                settlements: calcSettlements(data.persons || [], data.expenses || []),
+                                ...data
+                            };
+                        });
+                    } catch (error) {
+                        console.error('讀取歷史失敗:', error);
+                        if (error.code === 'permission-denied') {
+                             alert('讀取失敗：權限不足。請檢查 Firestore Rules。');
+                        }
+                    } finally {
+                        isLoadingHistory.value = false;
+                    }
+                };
+
+                const restoreEvent = (docItem) => {
+                    if (!confirm('載入此紀錄將會覆蓋您目前的變更進度，確定要繼續嗎？')) return;
+                    
+                    eventTitle.value = docItem.title;
+                    persons.value = docItem.persons;
+                    expenses.value = docItem.expenses;
+                    
+                    if (persons.value.length > 0) {
+                        personIdCounter = Math.max(...persons.value.map(p => p.id)) + 1;
+                    }
+                    if (expenses.value.length > 0) {
+                        expenseIdCounter = Math.max(...expenses.value.map(e => e.id)) + 1;
+                    }
+                    newExpense.value.involvedPersonIds = persons.value.map(p => p.id);
+                    
+                    currentPage.value = 'home';
+                };
+
+                const formatDate = (timestamp) => {
+                    if (!timestamp) return '';
+                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                    return date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+                };
+
+                return {
+                    isCheckingAuth,
+                    currentUser,
+                    currentPage,
+                    handleSignOut,
+                    goToHistory,
+                    createNewEvent,
+
+                    eventTitle,
+                    persons,
+                    newPersonName,
+                    expenses,
+                    newExpense,
+                    
+                    addPerson,
+                    removePerson,
+                    addExpense,
+                    removeExpense,
+                    getPersonName,
+                    
+                    totalAmount,
+                    settlements,
+
+                    isSaving,
+                    historyList,
+                    isLoadingHistory,
+                    saveToFirebase,
+                    loadHistory,
+                    restoreEvent,
+                    formatDate
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
