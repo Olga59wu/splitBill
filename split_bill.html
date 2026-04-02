@@ -1,649 +1,1037 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" class="antialiased">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>分帳小幫手</title>
-    <!-- 引入 Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>活動編輯 - 分帳小幫手</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#f8fafc">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Vue 3 -->
+    <script>tailwind.config = { darkMode: 'class' };</script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <!-- 引入 Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f8fafc;
         }
+
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
-        input[type="number"] {
-            -moz-appearance: textfield;
+
+        [v-cloak] {
+            display: none;
         }
-        [v-cloak] { display: none; }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .toast-enter-active,
+        .toast-leave-active {
+            transition: all 0.3s ease;
+        }
+
+        .toast-enter-from,
+        .toast-leave-to {
+            opacity: 0;
+            transform: translateY(-20px) translateX(-50%);
+        }
+
+        .toast-enter-to,
+        .toast-leave-from {
+            opacity: 1;
+            transform: translateY(0) translateX(-50%);
+        }
     </style>
 </head>
-<body class="text-gray-800 antialiased min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 pb-12">
+
+<body
+    class="text-slate-800 dark:text-slate-200 transition-colors duration-500 overflow-x-hidden pb-16 selection:bg-emerald-100 selection:text-emerald-900 dark:selection:bg-emerald-900/50">
 
     <div id="app" v-cloak>
-        
-        <!-- 載入中狀態遮罩 -->
-        <div v-if="isCheckingAuth" class="min-h-screen flex items-center justify-center flex-col">
-            <svg class="animate-spin h-10 w-10 text-indigo-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <p class="mt-4 text-gray-500 font-medium tracking-wide">系統安全驗證中...</p>
+
+        <!-- UI: Toast -->
+        <transition name="toast">
+            <div v-if="toastMsg"
+                class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 bg-slate-900 dark:bg-slate-800 border border-slate-700 dark:border-slate-600 text-white text-sm font-semibold rounded-full shadow-2xl flex items-center gap-3">
+                <span class="text-base">🔔</span> {{ toastMsg }}
+            </div>
+        </transition>
+
+        <!-- UI: Confirm Modal -->
+        <div v-if="confirmModal.show"
+            class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 w-full max-w-sm border border-slate-100 dark:border-slate-800">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">{{ confirmModal.title }}</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">{{ confirmModal.message }}</p>
+                <div class="flex gap-3 justify-end">
+                    <button @click="closeConfirm(false)"
+                        class="px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">取消</button>
+                    <button @click="closeConfirm(true)"
+                        class="px-4 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl shadow-sm transition-all focus:ring-2 focus:ring-emerald-500">確定</button>
+                </div>
+            </div>
         </div>
 
-        <!-- 系統主體 (通過驗證後顯示) -->
+        <!-- UI: Global Prompt Modal (Name & Rates) -->
+        <div v-if="promptModal.show"
+            class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 w-full max-w-sm border border-slate-100 dark:border-slate-800">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">{{ promptModal.title }}</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">{{ promptModal.message }}</p>
+                <input v-model="promptModal.inputVal" type="text"
+                    class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 outline-none mb-6 font-medium text-slate-800"
+                    @keyup.enter="closePrompt(promptModal.inputVal)">
+                <div class="flex gap-3 justify-end">
+                    <button @click="closePrompt(null)"
+                        class="px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">取消</button>
+                    <button @click="closePrompt(promptModal.inputVal)"
+                        class="px-4 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl shadow-sm transition-all">完成</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI: Currency Rates Config Modal -->
+        <div v-if="showRateModal"
+            class="fixed inset-0 z-[105] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 w-full max-w-sm border border-slate-100 dark:border-slate-800">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">外幣匯率設定</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">系統會以台幣(TWD)為基準自動乘算。請輸入目前的匯率即可。</p>
+                <div class="space-y-3 mb-6">
+                    <div v-for="(rate, cur) in eventRates" :key="'cfg_'+cur" class="flex items-center gap-3">
+                        <span class="w-12 font-bold text-slate-700 dark:text-slate-300">{{cur}}</span>
+                        <input v-if="cur !== 'TWD'" v-model.number="eventRates[cur]" type="number" step="0.001"
+                            class="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white dark:bg-slate-800" />
+                        <span v-else
+                            class="flex-1 px-3 py-2 text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900 rounded-lg">1.000
+                            (母幣基準)</span>
+                    </div>
+                </div>
+                <div class="flex gap-3 justify-end">
+                    <button @click="closeRateModal"
+                        class="px-5 py-2.5 text-sm font-bold text-white bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 rounded-xl transition-all">套用儲存</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="isCheckingAuth" class="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+            <svg class="animate-spin h-10 w-10 text-slate-900 dark:text-white" xmlns="http://www.w3.org/2000/svg"
+                fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-80" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+        </div>
+
         <div v-else>
-            <!-- 頂部導覽列 -->
-            <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
-                <div class="max-w-4xl mx-auto px-4 md:px-8 py-3 flex justify-between items-center">
-                    <div class="flex items-center gap-6">
-                        <div class="font-bold text-indigo-700 text-lg flex items-center gap-2">💰 分帳小幫手</div>
+            <!-- Guest Identity Claim Banner -->
+            <div v-if="isVisitor"
+                class="bg-indigo-600 text-white px-4 py-3 shadow-md border-b border-indigo-700 relative z-40 transition-all">
+                <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
+                    <div class="flex items-center gap-2 text-sm font-medium">
+                        <span class="text-xl">👀</span>
+                        <span>您正處於訪客預覽模式。選擇您的身分即可存入歷史紀錄。</span>
+                    </div>
+                    <div class="flex items-center gap-2 w-full md:w-auto">
+                        <select v-model="selectedIdentity"
+                            class="flex-1 md:w-40 bg-indigo-900 border border-indigo-500 rounded px-3 py-1.5 text-sm font-bold outline-none focus:ring-2 focus:ring-white">
+                            <option value="" disabled>請選擇您的名字</option>
+                            <option v-for="p in persons" :key="'claim'+p.id" :value="p.id">{{ p.name }}</option>
+                        </select>
+                        <button @click="claimIdentity" :disabled="!selectedIdentity || isClaiming"
+                            class="bg-white text-indigo-700 hover:bg-emerald-50 px-4 py-1.5 rounded text-sm font-bold shadow-sm transition-all whitespace-nowrap disabled:opacity-50">
+                            <span v-if="isClaiming" class="animate-pulse">認領中...</span>
+                            <span v-else>這是我！</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Navbar -->
+            <nav
+                class="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-50">
+                <div class="max-w-5xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
+                    <div class="flex items-center gap-4 md:gap-8">
+                        <div
+                            class="font-extrabold text-slate-900 dark:text-white text-lg md:text-xl tracking-tight hidden md:flex items-center gap-2">
+                            <span>💳</span> 分帳小幫手
+                        </div>
                         <div class="flex gap-2">
-                            <button @click="currentPage = 'home'" :class="['px-3 py-1.5 rounded-lg text-sm font-medium transition', currentPage === 'home' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-50']">當前活動編輯</button>
-                            <button @click="goToHistory" :class="['px-3 py-1.5 rounded-lg text-sm font-medium transition', currentPage === 'history' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-50']">歷史紀錄總覽</button>
+                            <div
+                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-semibold bg-slate-900 dark:bg-slate-700 text-white shadow-md">
+                                編輯活動</div>
+                            <a href="./history.html"
+                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 relative z-10 block">歷史總覽</a>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer mr-2 select-none"
+                            @click="showRateModal = true">
+                            💱 匯率設定
+                        </div>
                         <template v-if="currentUser">
-                            <div class="flex items-center gap-2">
-                                <img :src="currentUser.photoURL" class="w-8 h-8 rounded-full border border-gray-200">
-                                <span class="text-sm text-gray-600 hidden md:inline">{{ currentUser.displayName }}</span>
+                            <div class="hidden md:flex items-center text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer mr-2 transition-colors"
+                                @click="changeMyName" title="點選修改您的預設暱稱">
+                                {{ myPreferredName }} ✏️
                             </div>
-                            <button @click="handleSignOut" class="text-sm text-red-500 hover:text-red-700 font-medium">登出</button>
+                            <img :src="currentUser.photoURL"
+                                class="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 cursor-pointer"
+                                alt="Avatar" @click="changeMyName">
+                            <button @click="handleSignOut"
+                                class="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white font-semibold hidden md:block">登出</button>
                         </template>
                     </div>
                 </div>
             </nav>
 
-            <div class="max-w-4xl mx-auto space-y-6 mt-6 px-4 md:px-8">
-                
-                <!-- ====== 當前分帳頁面 (Home) ====== -->
-                <div v-show="currentPage === 'home'">
-                    <!-- 標題區 -->
-                    <header class="text-center py-6 block">
-                        <h1 class="text-4xl font-bold text-indigo-700 tracking-tight flex justify-center items-center gap-2">
-                            <input 
-                                v-model.trim="eventTitle" 
-                                placeholder="請在此輸入活動主題 (如：日本之旅)" 
-                                class="bg-transparent border-b-2 border-indigo-200 focus:border-indigo-600 focus:outline-none text-center px-2 py-1 flex-1 max-w-sm transition-colors text-indigo-700 placeholder-indigo-300" 
-                                maxlength="30"
-                            >
-                        </h1>
-                        <p class="text-gray-500 mt-2">輸入本活動的夥伴與花費，自動算出最佳轉帳路徑</p>
-                    </header>
+            <div class="max-w-5xl mx-auto space-y-6 md:space-y-8 mt-6 md:mt-10 px-4 md:px-8 animate-fade-in relative">
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- 左方：輸入區 -->
-                        <div class="space-y-6">
-                            
-                            <!-- 區塊 1：參與者管理 -->
-                            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                <h2 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
-                                    <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex justify-center items-center mr-2 text-sm">1</span>
-                                    同行夥伴
-                                </h2>
-                                
-                                <form @submit.prevent="addPerson" class="flex gap-2 mb-4">
-                                    <input 
-                                        v-model.trim="newPersonName" 
-                                        type="text" 
-                                        placeholder="輸入名字 (例如：小明)" 
-                                        required
-                                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                                    >
-                                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">
-                                        新增
-                                    </button>
-                                </form>
+                <header class="text-center mb-8">
+                    <h1 class="flex justify-center items-center">
+                        <input v-if="!isReadOnly" v-model.trim="eventTitle" @change="handleTitleChange"
+                            placeholder="活動主題 (例: 沖繩旅遊)"
+                            class="bg-transparent border-b-2 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500 focus:border-slate-900 dark:focus:border-white focus:outline-none text-center px-4 py-2 w-full max-w-sm md:max-w-lg text-3xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-colors"
+                            maxlength="30">
+                        <div v-else
+                            class="text-center px-4 py-2 w-full max-w-sm md:max-w-lg text-3xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white border-b-2 border-transparent">
+                            {{ eventTitle || '未命名活動' }}</div>
+                    </h1>
+                </header>
 
-                                <ul class="flex flex-wrap gap-2">
-                                    <li v-for="person in persons" :key="person.id" 
-                                        class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-sm flex items-center shadow-sm border border-indigo-100">
-                                        {{ person.name }}
-                                        <button @click="removePerson(person.id)" class="ml-2 text-indigo-400 hover:text-red-500 transition font-bold">
-                                            &times;
-                                        </button>
-                                    </li>
-                                </ul>
-                                <p v-if="persons.length === 0" class="text-gray-400 text-sm italic mt-2">請先新增同行夥伴</p>
-                            </section>
+                <div v-if="isVisitor"
+                    class="bg-indigo-50 border border-indigo-100 p-4 mb-6 rounded-xl text-center text-indigo-600 text-sm font-bold flex items-center justify-center gap-2">
+                    <span>🔒</span> 唯讀模式：您目前作為旁觀者，僅能觀看此活動目前的明細與轉帳結果，無法存檔或修改。要在頂部選擇身分後才能編輯。
+                </div>
 
-                            <!-- 區塊 2：新增花費 -->
-                            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                <h2 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
-                                    <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex justify-center items-center mr-2 text-sm">2</span>
-                                    新增花費
-                                </h2>
+                <div
+                    :class="['grid grid-cols-1 gap-6 md:gap-8', isReadOnly ? 'xl:grid-cols-1 max-w-4xl mx-auto' : 'xl:grid-cols-2']">
+                    <!-- 左列 -->
+                    <div v-if="!isReadOnly" class="space-y-6 md:space-y-8">
+                        <!-- 人員區塊 -->
+                        <section
+                            class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 md:p-8">
+                            <h2 class="text-lg font-bold mb-5 text-slate-900 dark:text-white flex items-center gap-3">
+                                <span
+                                    class="w-7 h-7 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs font-black">1</span>
+                                同行夥伴
+                            </h2>
+                            <form @submit.prevent="addPerson" class="flex gap-3 mb-3">
+                                <input v-model.trim="newPersonName" type="text" placeholder="夥伴名稱" required
+                                    class="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 dark:text-white placeholder-slate-400 dark:placeholder-slate-600">
+                                <button type="submit"
+                                    class="bg-slate-900 dark:bg-slate-700 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-slate-800 dark:hover:bg-slate-600 shadow-sm shrink-0">新增</button>
+                            </form>
+                            <!-- 常客快取 -->
+                            <div v-if="filteredContacts.length > 0"
+                                class="flex items-center gap-2 overflow-x-auto no-scrollbar mb-6 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                <span class="text-xs font-bold text-slate-400 shrink-0 ml-1 mr-1">常客快點:</span>
+                                <button v-for="(name, idx) in filteredContacts" :key="'cnt'+idx"
+                                    @click="fastAddPerson(name)"
+                                    class="shrink-0 bg-white text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-md text-xs font-bold whitespace-nowrap border border-slate-200 shadow-sm transition-colors cursor-pointer">+
+                                    {{ name }}</button>
+                            </div>
+                            <div v-else class="mb-5"></div>
 
-                                <form @submit.prevent="addExpense" class="space-y-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-600 mb-1">付款人</label>
-                                        <select 
-                                            v-model="newExpense.payerId" 
-                                            required
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                                            :disabled="persons.length === 0"
-                                        >
-                                            <option value="" disabled>請選擇是誰付的錢</option>
-                                            <option v-for="person in persons" :key="person.id" :value="person.id">
-                                                {{ person.name }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="flex gap-4">
-                                        <div class="flex-1">
-                                            <label class="block text-sm font-medium text-gray-600 mb-1">項目名稱</label>
-                                            <input 
-                                                v-model.trim="newExpense.description" 
-                                                type="text" 
-                                                placeholder="例如：晚餐、計程車" 
-                                                required
-                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                            >
-                                        </div>
-                                        <div class="w-1/3">
-                                            <label class="block text-sm font-medium text-gray-600 mb-1">金額</label>
-                                            <input 
-                                                v-model.number="newExpense.amount" 
-                                                type="number" 
-                                                min="1"
-                                                placeholder="0" 
-                                                required
-                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                            >
-                                        </div>
-                                    </div>
+                            <ul class="flex flex-wrap gap-2">
+                                <li v-for="person in persons" :key="person.id"
+                                    class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-semibold flex items-center shadow-sm">
+                                    {{ person.name }}
+                                    <button @click="removePerson(person.id)"
+                                        class="ml-3 text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 font-bold">&times;</button>
+                                </li>
+                            </ul>
+                        </section>
 
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-600 mb-2">誰要分攤此筆花費？</label>
-                                        <div class="flex flex-wrap gap-3">
-                                            <label v-for="person in persons" :key="'inv-new-' + person.id" class="flex items-center cursor-pointer select-none bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition">
-                                                <input 
-                                                    type="checkbox" 
-                                                    :value="person.id" 
-                                                    v-model="newExpense.involvedPersonIds"
-                                                    class="w-4 h-4 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500"
-                                                >
-                                                <span class="ml-2 text-sm text-gray-700">{{ person.name }}</span>
-                                            </label>
-                                        </div>
-                                        <p v-if="newExpense.involvedPersonIds.length === 0" class="text-red-500 text-xs mt-1">請至少選擇一位分攤者</p>
-                                    </div>
+                        <!-- 表單區塊 -->
+                        <section
+                            :class="['bg-white dark:bg-slate-900 rounded-xl shadow-sm border p-6 md:p-8 transition-all', editingExpenseId ? 'border-amber-300 dark:border-amber-500/50 ring-4 ring-amber-50 dark:ring-amber-900/20' : 'border-slate-100 dark:border-slate-800']">
+                            <h2
+                                class="text-lg font-bold mb-6 text-slate-900 dark:text-white flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span
+                                        :class="['w-7 h-7 rounded flex items-center justify-center text-xs font-black', editingExpenseId?'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400':'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300']">2</span>
+                                    <span v-if="editingExpenseId"
+                                        class="text-amber-600 dark:text-amber-400">正在編輯明細</span>
+                                    <span v-else>新增花費</span>
+                                </div>
+                                <button v-if="editingExpenseId" @click="cancelEditExpense" type="button"
+                                    class="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold px-3 py-1.5 rounded">取消編輯</button>
+                            </h2>
 
-                                    <button 
-                                        type="submit" 
-                                        :disabled="persons.length === 0"
-                                        class="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg shadow-sm transition"
-                                    >
-                                        加入明細
-                                    </button>
-                                </form>
-                            </section>
-
-                        </div>
-
-                        <!-- 右方：結果區 -->
-                        <div class="space-y-6">
-                            
-                            <!-- 區塊 3：花費明細 -->
-                            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                <h2 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
-                                    <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex justify-center items-center mr-2 text-sm">3</span>
-                                    花費紀錄清單
-                                </h2>
-
-                                <div v-if="expenses.length === 0" class="text-center py-8 text-gray-400">
-                                    尚無花費紀錄，請由左方新增。
+                            <form @submit.prevent="addExpense" class="space-y-5">
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">墊付人</label>
+                                    <select v-model="newExpense.payerId" required
+                                        class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-transparent dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 font-medium text-slate-800 dark:text-white">
+                                        <option value="" disabled>請選擇誰先付款</option>
+                                        <option v-for="person in persons" :key="person.id" :value="person.id">{{
+                                            person.name }}</option>
+                                    </select>
                                 </div>
 
-                                <ul v-else class="space-y-3 max-h-48 overflow-y-auto pr-2">
-                                    <li v-for="expense in expenses" :key="expense.id" class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                                        <div>
-                                            <div class="font-medium text-gray-800">{{ expense.description }}</div>
-                                            <div class="text-sm text-gray-500">{{ getPersonName(expense.payerId) }} 先付了 <span class="font-semibold text-emerald-600">${{ expense.amount }}</span></div>
-                                            <div class="text-xs text-indigo-500 mt-1">
-                                                分攤者：
-                                                <span v-for="(pid, idx) in expense.involvedPersonIds" :key="'inv'+pid">
-                                                    {{ getPersonName(pid) }}<span v-if="idx < expense.involvedPersonIds.length - 1">, </span>
+                                <div class="flex flex-col sm:flex-row gap-4">
+                                    <div class="flex-1">
+                                        <label
+                                            class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">項目</label>
+                                        <input v-model.trim="newExpense.description" type="text" placeholder="晚餐"
+                                            required
+                                            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-transparent dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 font-medium text-slate-800 dark:text-white">
+                                    </div>
+                                    <div class="w-full sm:w-24">
+                                        <label
+                                            class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">幣別</label>
+                                        <select v-model="newExpense.currency"
+                                            class="w-full px-3 py-3 bg-slate-50 dark:bg-slate-950 border border-transparent dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 font-bold text-slate-800 dark:text-emerald-400">
+                                            <option v-for="(val, currKey) in eventRates" :key="currKey"
+                                                :value="currKey">{{currKey}}</option>
+                                        </select>
+                                    </div>
+                                    <div class="w-full sm:w-32">
+                                        <label
+                                            class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">外幣金額</label>
+                                        <input v-model.number="newExpense.amount" type="number" step="0.01" min="1"
+                                            placeholder="金額" required
+                                            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-transparent dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 font-bold tabular-nums text-slate-800 dark:text-white">
+                                    </div>
+                                </div>
+                                <div v-if="newExpense.currency !== 'TWD' && newExpense.amount"
+                                    class="text-right text-xs font-bold text-emerald-600 dark:text-emerald-400 px-1 -mt-2">
+                                    ≒ TWD $ {{ Math.round(newExpense.amount * eventRates[newExpense.currency]) }}
+                                </div>
+
+                                <!-- Custom Fractional Splits Section -->
+                                <div class="bg-slate-50 p-4.5 rounded-xl border border-slate-100">
+                                    <div class="mb-4">
+                                        <label
+                                            class="block text-xs font-bold text-slate-500 tracking-widest">進階分攤設定</label>
+                                        <p class="text-[11px] text-slate-400 mt-1.5 font-medium leading-relaxed">
+                                            預設為所有打勾者「平分」總額。<br>您也可在此直接指定某人該付多少，剩下沒標金額的人系統會自動平分剩餘零頭。</p>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <div v-for="person in persons" :key="'inv' + person.id"
+                                            class="flex items-center gap-3">
+                                            <label class="flex items-center cursor-pointer min-w-[80px]">
+                                                <input type="checkbox" :value="person.id"
+                                                    v-model="newExpense.involvedPersonIds"
+                                                    class="w-4 h-4 text-emerald-600 bg-white rounded focus:ring-emerald-500">
+                                                <span class="ml-2 text-sm font-semibold text-slate-700">{{ person.name
+                                                    }}</span>
+                                            </label>
+                                            <input v-if="newExpense.involvedPersonIds.includes(person.id)"
+                                                v-model.number="newExpense.fractionalAmounts[person.id]" type="number"
+                                                class="flex-1 px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-md placeholder-slate-300 focus:outline-none focus:border-emerald-400 font-bold text-emerald-600"
+                                                placeholder="不填代表均分">
+                                        </div>
+                                    </div>
+                                    <p v-if="newExpense.involvedPersonIds.length === 0"
+                                        class="text-rose-500 text-xs font-bold mt-3">請至少勾選一名分攤者</p>
+                                </div>
+
+                                <button type="submit" :disabled="persons.length === 0"
+                                    :class="['w-full text-white font-bold tracking-wide py-3.5 rounded-lg transition-all active:scale-[0.99] disabled:opacity-30', editingExpenseId ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-900 dark:bg-emerald-600 dark:hover:bg-emerald-500 hover:bg-slate-800']">
+                                    {{ editingExpenseId ? '更新明細' : '寫入明細庫' }}
+                                </button>
+                            </form>
+                        </section>
+                    </div>
+
+                    <!-- 右列 -->
+                    <div class="space-y-6 md:space-y-8 flex flex-col">
+                        <!-- Chart & List Tabs -->
+                        <section
+                            class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 md:p-8 flex-1 flex flex-col min-h-[400px]">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                                    <span
+                                        class="w-7 h-7 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs font-black">3</span>
+                                    明細庫
+                                </h2>
+                                <div class="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex text-xs font-bold">
+                                    <button @click="showChart = false"
+                                        :class="['px-3 py-1.5 rounded-md transition-all', !showChart ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm':'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300']">條列</button>
+                                    <button @click="showChart = true"
+                                        :class="['px-3 py-1.5 rounded-md transition-all', showChart ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm':'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300']">圖表</button>
+                                </div>
+                            </div>
+
+                            <div v-show="!showChart" class="flex-1 overflow-y-auto no-scrollbar pr-1 -mr-1">
+                                <div v-if="expenses.length === 0"
+                                    class="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-medium text-sm">
+                                    無任何花費。</div>
+                                <ul v-else class="space-y-3">
+                                    <li v-for="expense in expenses" :key="expense.id"
+                                        :class="['p-4 rounded-lg border transition-all group flex justify-between items-start', editingExpenseId === expense.id ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800']">
+                                        <div class="flex-1">
+                                            <div class="font-extrabold text-slate-900 dark:text-white">{{
+                                                expense.description }}</div>
+                                            <div class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">由
+                                                {{ getPersonName(expense.payerId) }} 墊付 <span
+                                                    class="text-emerald-600 dark:text-emerald-400 font-black ml-1">{{
+                                                    expense.currency }} {{ expense.amount }}</span></div>
+                                            <div
+                                                class="text-xs text-slate-400 dark:text-slate-500 mt-2 flex flex-wrap gap-1 items-center">
+                                                <span>分給: </span>
+                                                <span v-for="(pid, idx) in expense.involvedPersonIds"
+                                                    :key="'invShow'+pid"
+                                                    class="bg-slate-200/50 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300">
+                                                    {{ getPersonName(pid) }}
+                                                    <span
+                                                        v-if="expense.fractionalAmounts && expense.fractionalAmounts[pid]"
+                                                        class="text-[9px] text-emerald-500 ml-1 font-bold">({{expense.fractionalAmounts[pid]}})</span>
                                                 </span>
                                             </div>
                                         </div>
-                                        <button @click="removeExpense(expense.id)" class="text-gray-400 hover:text-red-500 p-2 transition">
-                                            刪除
-                                        </button>
+                                        <div v-if="!isReadOnly" class="flex gap-1.5 ml-3 shrink-0">
+                                            <button @click="startEditExpense(expense)"
+                                                class="text-slate-400 hover:text-amber-500 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 w-8 h-8 rounded flex items-center justify-center transition-all md:opacity-0 group-hover:opacity-100">✏️</button>
+                                            <button @click="removeExpense(expense.id)"
+                                                class="text-slate-400 hover:text-rose-500 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 w-8 h-8 rounded flex items-center justify-center transition-all md:opacity-0 group-hover:opacity-100 font-bold">&times;</button>
+                                        </div>
                                     </li>
                                 </ul>
-                                
-                                <div v-if="expenses.length > 0" class="mt-4 pt-4 border-t border-gray-100 flex justify-between font-bold text-gray-800 text-lg">
-                                    <span>總花費：</span>
-                                    <span>$ {{ totalAmount }}</span>
-                                </div>
-                            </section>
+                            </div>
 
-                            <!-- 區塊 4：最終結算 -->
-                            <section class="bg-white rounded-2xl shadow-md border-t-4 border-indigo-500 p-6">
-                                <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
-                                    結算結果 (最佳化轉帳)
+                            <div v-show="showChart"
+                                class="flex-1 flex flex-col justify-center items-center relative min-h-[300px]">
+                                <canvas id="expenseChart" class="w-full max-h-[300px]"></canvas>
+                                <div v-if="expenses.length === 0"
+                                    class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm text-sm text-slate-400 font-bold">
+                                    加入金額以繪製圖表</div>
+                            </div>
+                        </section>
+
+                        <!-- 結算清單區塊 -->
+                        <section
+                            class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 md:p-8 relative overflow-hidden">
+                            <!-- 背景網格裝飾 -->
+                            <div
+                                class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMTQ4LCAxNjMsIDE4NCwgMC4xNSkiLz48L3N2Zz4=')] [mask-image:linear-gradient(to_bottom,white,transparent)] dark:opacity-20 pointer-events-none">
+                            </div>
+
+                            <div class="relative z-10">
+                                <h2
+                                    class="text-lg font-bold mb-6 text-slate-900 dark:text-white flex items-center justify-between">
+                                    最終結算路徑
+                                    <div v-if="settlements.length > 0" class="flex gap-2">
+                                        <button @click="exportImageReport"
+                                            class="text-[11px] bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-extrabold px-3 py-1.5 rounded border border-emerald-200 dark:border-emerald-800/50 flex items-center hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors">
+                                            🖼️ 生成圖檔
+                                        </button>
+                                    </div>
                                 </h2>
 
-                                <div v-if="persons.length < 2" class="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                    請至少新增兩位夥伴才能進行結算。
+                                <div v-if="settlements.length === 0 && expenses.length > 0"
+                                    class="text-sm bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 p-5 rounded-xl text-center font-bold text-emerald-600 dark:text-emerald-400 mb-6">
+                                    ✨ 帳戶完美打平，無須產生任何轉帳。
                                 </div>
-                                <div v-else-if="expenses.length === 0" class="text-sm text-gray-500 text-center py-4">
-                                    新增花費後，這裡會自動計算誰該給誰錢。
-                                </div>
-                                <div v-else-if="settlements.length === 0" class="text-sm text-emerald-600 bg-emerald-50 p-4 rounded-lg text-center font-medium">
-                                    🎉 大家互不相欠，帳目已平！
-                                </div>
-                                
-                                <ul v-else class="space-y-3 mb-6">
-                                    <li v-for="(settlement, index) in settlements" :key="index" class="flex items-center justify-between p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                                <ul v-else class="space-y-2 mb-8">
+                                    <li v-for="(stl, idx) in settlements" :key="'ts'+idx"
+                                        class="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
                                         <div class="flex items-center gap-3">
-                                            <span class="font-bold text-red-500">{{ settlement.from }}</span>
-                                            <span class="text-gray-400 text-sm">➡️ 轉給 ➡️</span>
-                                            <span class="font-bold text-emerald-600">{{ settlement.to }}</span>
+                                            <span class="font-bold text-slate-800 dark:text-slate-200">{{ stl.from
+                                                }}</span>
+                                            <svg class="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                            </svg>
+                                            <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ stl.to
+                                                }}</span>
                                         </div>
-                                        <span class="font-bold text-gray-800 text-lg">$ {{ settlement.amount }}</span>
+                                        <span
+                                            class="font-black text-slate-900 dark:text-white text-lg tabular-nums tracking-tight">NT$
+                                            {{ stl.amount }}</span>
                                     </li>
                                 </ul>
 
-                                <!-- 雲端儲存按鈕 -->
-                                <button 
-                                    v-if="persons.length >= 2 && expenses.length > 0"
-                                    @click="saveToFirebase" 
+                                <div
+                                    class="flex items-center justify-between mb-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                    <span
+                                        class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">總估值
+                                        (以台幣計)</span>
+                                    <span
+                                        class="text-2xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">$
+                                        {{ totalAmountAsTwd }}</span>
+                                </div>
+
+                                <div v-if="editEventId && !isReadOnly"
+                                    class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold py-4 rounded-xl flex justify-center items-center gap-2">
+                                    <span v-if="isSaving" class="flex items-center gap-2"><svg
+                                            class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg> 變更即時同步中...</span>
+                                    <span v-else>⚡ 變更已自動連動至雲端</span>
+                                </div>
+                                <button v-else-if="expenses.length > 0 && !isReadOnly" @click="saveToFirebase"
                                     :disabled="isSaving"
-                                    class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition flex justify-center items-center gap-2"
-                                >
-                                    <svg v-if="isSaving" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                    💾 儲存歷史紀錄至雲端
+                                    class="w-full bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 text-white font-bold tracking-wide py-4 rounded-xl transition-all shadow-lg active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-50">
+                                    <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg"
+                                        fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                        </path>
+                                    </svg>
+                                    <span v-else>💾 建立專案並上傳雲端</span>
                                 </button>
-                            </section>
-
-                        </div>
-                    </div>
-                </div> <!-- End of Home View -->
-
-
-                <!-- ====== 歷史紀錄頁面 (History) ====== -->
-                <div v-show="currentPage === 'history'" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 min-h-[50vh]">
-                    <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-                        <h2 class="text-2xl font-bold text-gray-800 tracking-tight">歷史分帳紀錄</h2>
-                        <div class="flex gap-4">
-                            <button @click="loadHistory" class="text-gray-500 hover:text-indigo-600 text-sm font-medium flex items-center gap-1 transition">
-                                🔄 重新載入
-                            </button>
-                            <button @click="createNewEvent" class="bg-emerald-500 hover:bg-emerald-600 shadow-sm hover:shadow text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2">
-                                ➕ 新增活動
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div v-if="isLoadingHistory" class="text-center py-10 text-gray-500">
-                        載入中...
-                    </div>
-                    <div v-else-if="historyList.length === 0" class="text-center py-10 text-gray-400">
-                        目前沒有任何歷史紀錄喔！請先在分帳頁面中建立並儲存。
-                    </div>
-                    
-                    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div v-for="docItem in historyList" :key="docItem.id" class="border border-gray-200 rounded-xl p-4 hover:border-indigo-300 transition group bg-white shadow-sm hover:shadow">
-                            <div class="flex justify-between items-start mb-2">
-                                <h3 class="font-bold text-lg text-gray-800">{{ docItem.title || '未命名活動' }}</h3>
-                                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">{{ formatDate(docItem.createdAt) }}</span>
                             </div>
-                            <div class="text-sm text-gray-600 mb-4 flex gap-4">
-                                <span>👥 {{ docItem.persons.length }} 人</span>
-                                <span>🧾 {{ docItem.expenses.length }} 筆明細</span>
-                                <span class="font-semibold text-emerald-600">總計 $ {{ docItem.totalAmount }}</span>
-                            </div>
+                        </section>
 
-                            <!-- 歷史明細結算結果 -->
-                            <div v-if="docItem.settlements && docItem.settlements.length > 0" class="bg-indigo-50/50 border border-indigo-100 rounded-lg p-3 mb-4 space-y-1">
-                                <h4 class="text-xs font-bold text-gray-500 mb-2 tracking-wider">💰 分帳路徑</h4>
-                                <div v-for="(stl, stlIdx) in docItem.settlements" :key="'stl-'+stlIdx" class="text-sm flex justify-between items-center bg-white px-2 py-1.5 rounded shadow-sm">
-                                    <div><span class="text-red-500 font-medium">{{ stl.from }}</span> <span class="text-xs mx-1 text-gray-400">➡️</span> <span class="text-emerald-600 font-medium">{{ stl.to }}</span></div>
-                                    <div class="font-bold text-gray-700">${{ stl.amount }}</div>
+                        <!-- 變更軌跡區塊 (Audit Logs) -->
+                        <section
+                            class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 md:p-8 hidden md:block">
+                            <h2
+                                class="text-xs font-extrabold mb-4 text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                <span>📍</span> 變更軌跡
+                            </h2>
+                            <div class="max-h-48 overflow-y-auto pr-2 space-y-4 relative scroll-smooth thin-scrollbar">
+                                <div v-if="eventLogs.length === 0" class="text-xs font-bold text-slate-400">
+                                    尚無變更。您的任何編輯動作皆會加密記錄於此，確保系統防呆。</div>
+                                <div v-for="(log, idx) in eventLogs" :key="'log'+idx"
+                                    class="flex gap-4 items-start relative before:absolute before:left-[7px] before:top-6 before:-bottom-4 before:w-[2px] before:bg-slate-100 dark:before:bg-slate-800/80 last:before:hidden">
+                                    <div
+                                        class="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-900/50 border-[3px] border-emerald-500 dark:border-emerald-400 shrink-0 mt-0.5 relative z-10">
+                                    </div>
+                                    <div class="flex-1 pb-1">
+                                        <p class="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{{
+                                            log.msg }}</p>
+                                        <p
+                                            class="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5 tracking-wider">
+                                            {{ log.time }}</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div v-else-if="docItem.expenses && docItem.expenses.length > 0" class="bg-emerald-50 text-emerald-600 text-xs text-center border border-emerald-100 rounded-lg py-2 mb-4">
-                                🎉 帳目已平，互不相欠。
-                            </div>
-
-                            <button @click="restoreEvent(docItem)" class="w-full py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition">
-                                載入此紀錄並繼續編輯
-                            </button>
-                        </div>
+                        </section>
                     </div>
                 </div>
 
+                <!-- 手機版變更軌跡區塊 (放最下面) -->
+                <section
+                    class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 md:hidden">
+                    <h2
+                        class="text-xs font-extrabold mb-4 text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                        <span>📍</span> 變更軌跡
+                    </h2>
+                    <div class="max-h-48 overflow-y-auto pr-2 space-y-4 relative scroll-smooth">
+                        <div v-if="eventLogs.length === 0" class="text-xs font-bold text-slate-400">尚無紀錄。</div>
+                        <div v-for="(log, idx) in eventLogs" :key="'logm'+idx"
+                            class="flex gap-4 items-start relative before:absolute before:left-[7px] before:top-6 before:-bottom-4 before:w-[2px] before:bg-slate-100 dark:before:bg-slate-800/80 last:before:hidden">
+                            <div
+                                class="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-900/50 border-[3px] border-emerald-500 dark:border-emerald-400 shrink-0 mt-0.5 relative z-10">
+                            </div>
+                            <div class="flex-1 pb-1">
+                                <p class="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{{ log.msg }}
+                                </p>
+                                <p
+                                    class="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5 tracking-wider">
+                                    {{ log.time }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
-        </div> <!-- End of Auth Protected Area -->
+
+            <!-- Receipt Generator -->
+            <div id="receiptCapture"
+                class="absolute -left-[9999px] top-0 w-[450px] p-8 pb-10 bg-gradient-to-br from-slate-900 to-black rounded-3xl"
+                style="font-family: 'Inter', sans-serif;">
+                <div class="flex items-center gap-3 mb-6">
+                    <div
+                        class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-slate-900 text-xl font-black">
+                        💳</div>
+                    <div class="text-emerald-400 font-black tracking-widest uppercase text-sm">分帳幫手 結算憑證</div>
+                </div>
+                <div class="bg-white/10 rounded-2xl p-6 mb-6">
+                    <h2 class="text-white text-2xl font-extrabold mb-1 tracking-tight">{{ eventTitle || '未命名活動' }}</h2>
+                    <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1 mt-4">總等值花費</div>
+                    <div class="text-white text-4xl font-black tracking-tight tabular-nums">NT$ {{ totalAmountAsTwd }}
+                    </div>
+                </div>
+                <div class="px-2">
+                    <div
+                        class="text-slate-400 text-xs font-bold uppercase tracking-widest border-b border-white/10 pb-3 mb-4">
+                        轉帳派發路徑</div>
+                    <ul class="space-y-4">
+                        <li v-for="(stl, i) in settlements" :key="'img'+i"
+                            class="flex justify-between items-center text-white">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-200">{{ stl.from }}</span>
+                                <span class="text-[10px] text-emerald-500">▶</span>
+                                <span class="font-bold text-emerald-400">{{ stl.to }}</span>
+                            </div>
+                            <span class="font-black text-xl tabular-nums">NT$ {{ stl.amount }}</span>
+                        </li>
+                    </ul>
+                </div>
+                <div
+                    class="mt-8 border-t border-dashed border-white/20 pt-6 text-center text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                    Generated By Advanced SplitBill
+                </div>
+            </div>
+
+        </div>
     </div>
 
-    <!-- Firebase SDK & Vue Logic -->
+    <!-- Core Scripts -->
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-        import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+        import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
-        const { createApp, ref, computed, onMounted } = Vue;
+        const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 
         createApp({
             setup() {
-                // ====== 狀態：認證與導航 ======
                 const isCheckingAuth = ref(true);
                 const currentUser = ref(null);
-                const currentPage = ref('history'); // 'home' | 'history'
 
-                // ====== 狀態：當前分帳 ======
                 const eventTitle = ref('');
-                const persons = ref([
-                    { id: 1, name: 'Alice' },
-                    { id: 2, name: 'Bob' }
-                ]);
-                let personIdCounter = 3;
-                let expenseIdCounter = 1;
-                const newPersonName = ref('');
+                const persons = ref([]);
+                const myPreferredName = ref('我');
+                const recentContacts = ref([]);
+
                 const expenses = ref([]);
-                const newExpense = ref({
-                    description: '',
-                    amount: null,
-                    payerId: '',
-                    involvedPersonIds: []
-                });
-                
-                // 初始化預設分攤者
-                newExpense.value.involvedPersonIds = persons.value.map(p => p.id);
+                const newExpense = ref(getEmptyExpenseObject());
+                const editingExpenseId = ref(null);
 
-                // ====== 狀態：歷史區塊 ======
-                const isSaving = ref(false);
-                const historyList = ref([]);
-                const isLoadingHistory = ref(false);
-
-                // ====== 掛載 Firebase Auth 監聽 ======
-                onMounted(() => {
-                    if(!auth) {
-                        alert("設定檔錯誤");
-                        return;
-                    }
-                    onAuthStateChanged(auth, (user) => {
-                        if (!user) {
-                            // 未登入，強制踢回首頁
-                            window.location.href = './index.html';
-                        } else {
-                            currentUser.value = user;
-                            isCheckingAuth.value = false;
-                            
-                            // 若使用者直接刷新但留在 history，自動載入
-                            if (currentPage.value === 'history') {
-                                loadHistory();
-                            }
-                        }
-                    });
-                });
-
-                // ====== 認證邏輯 ======
-                const handleSignOut = async () => {
-                    if(!auth) return;
-                    try {
-                        await signOut(auth);
-                        // 登出後 onAuthStateChanged 監聽器會觸發並自動拋回 index.html
-                    } catch (error) {
-                        console.error('登出失敗:', error);
-                    }
+                const eventLogs = ref([]);
+                const addSystemLog = (msg) => {
+                    const now = new Date();
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const mm = String(now.getMinutes()).padStart(2, '0');
+                    eventLogs.value.unshift({ msg, time: `${hh}:${mm}` });
+                    if (editEventId.value) syncStateToCloud();
                 };
 
-                const goToHistory = () => {
-                    currentPage.value = 'history';
-                    loadHistory();
-                };
-
-                const createNewEvent = () => {
-                    eventTitle.value = '';
-                    persons.value = [
-                        { id: 1, name: 'Alice' },
-                        { id: 2, name: 'Bob' }
-                    ];
-                    personIdCounter = 3;
-                    expenseIdCounter = 1;
-                    newPersonName.value = '';
-                    expenses.value = [];
-                    newExpense.value = {
-                        description: '',
-                        amount: null,
-                        payerId: '',
-                        involvedPersonIds: [1, 2]
-                    };
-                    currentPage.value = 'home';
-                };
-
-                // ====== 本地分帳邏輯 ======
-                const addPerson = () => {
-                    let name = newPersonName.value;
-                    if(name) name = name.trim();
-                    if (!name) return;
-                    if (persons.value.some(p => p.name === name)) {
-                        alert('此名稱已存在！');
-                        return;
-                    }
-                    const newId = personIdCounter++;
-                    persons.value.push({ id: newId, name });
-                    newPersonName.value = '';
-                    newExpense.value.involvedPersonIds.push(newId);
-                };
-
-                const removePerson = (id) => {
-                    if (expenses.value.some(e => e.payerId === id || e.involvedPersonIds.includes(id))) {
-                        alert('此人已包含在花費紀錄的付款或分攤中，請先刪除相關明細！');
-                        return;
-                    }
-                    persons.value = persons.value.filter(p => p.id !== id);
-                    if (newExpense.value.payerId === id) {
-                        newExpense.value.payerId = '';
-                    }
-                    newExpense.value.involvedPersonIds = newExpense.value.involvedPersonIds.filter(pid => pid !== id);
-                };
-
-                const addExpense = () => {
-                    if (!newExpense.value.payerId || !newExpense.value.description || !newExpense.value.amount) return;
-                    if (newExpense.value.involvedPersonIds.length === 0) {
-                        alert('防錯防護：請至少選擇一位分攤此筆花費的人！');
-                        return;
-                    }
-                    expenses.value.push({
-                        id: expenseIdCounter++,
-                        payerId: newExpense.value.payerId,
-                        description: newExpense.value.description,
-                        amount: newExpense.value.amount,
-                        involvedPersonIds: [...newExpense.value.involvedPersonIds]
-                    });
-                    newExpense.value.description = '';
-                    newExpense.value.amount = null;
-                };
-
-                const removeExpense = (id) => {
-                    expenses.value = expenses.value.filter(e => e.id !== id);
-                };
-
-                const getPersonName = (id) => {
-                    const person = persons.value.find(p => p.id === id);
-                    return person ? person.name : '未知';
-                };
-
-                const totalAmount = computed(() => {
-                    return expenses.value.reduce((sum, exp) => sum + exp.amount, 0);
-                });
-
-                const calcSettlements = (personsArray, expensesArray) => {
-                    if (!personsArray || personsArray.length === 0) return [];
-                    const balances = {};
-                    personsArray.forEach(p => balances[p.id] = 0);
-
-                    expensesArray.forEach(exp => {
-                        balances[exp.payerId] += exp.amount;
-                        const splitAmount = exp.amount / exp.involvedPersonIds.length;
-                        exp.involvedPersonIds.forEach(pid => {
-                            balances[pid] -= splitAmount;
-                        });
-                    });
-
-                    let debtors = [];
-                    let creditors = [];
-                    for (const [id, balance] of Object.entries(balances)) {
-                        if (balance < -0.01) debtors.push({ id: Number(id), amount: -balance });
-                        else if (balance > 0.01) creditors.push({ id: Number(id), amount: balance });
-                    }
-
-                    debtors.sort((a, b) => b.amount - a.amount);
-                    creditors.sort((a, b) => b.amount - a.amount);
-
-                    const results = [];
-                    let i = 0; let j = 0;
-
-                    const getName = (id) => {
-                        const p = personsArray.find(person => person.id === id);
-                        return p ? p.name : '未知';
-                    };
-
-                    while (i < debtors.length && j < creditors.length) {
-                        const debtor = debtors[i];
-                        const creditor = creditors[j];
-                        const amountToTransfer = Math.min(debtor.amount, creditor.amount);
-
-                        results.push({
-                            from: getName(debtor.id),
-                            to: getName(creditor.id),
-                            amount: Math.round(amountToTransfer)
-                        });
-
-                        debtor.amount -= amountToTransfer;
-                        creditor.amount -= amountToTransfer;
-                        if (debtor.amount < 0.01) i++;
-                        if (creditor.amount < 0.01) j++;
-                    }
-                    return results;
-                };
-
-                const settlements = computed(() => {
-                    return calcSettlements(persons.value, expenses.value);
-                });
-
-                // ====== 雲端資料庫邏輯 ======
-                const saveToFirebase = async () => {
-                    if(!db) { alert("請先設定 Firebase Config"); return; }
-                    
-                    const title = eventTitle.value || '未命名活動';
-                    if (!confirm(`確定要將「${title}」儲存至您的雲端歷史紀錄嗎？`)) return;
-
+                const syncStateToCloud = async () => {
+                    if (!editEventId.value || !db || isReadOnly.value) return;
                     isSaving.value = true;
                     try {
-                        const userEventsRef = collection(db, `users/${currentUser.value.uid}/events`);
-                        await addDoc(userEventsRef, {
-                            title: title,
+                        const payload = {
+                            title: eventTitle.value || '未命名活動',
                             persons: persons.value,
                             expenses: expenses.value,
-                            totalAmount: totalAmount.value,
-                            createdAt: serverTimestamp()
-                        });
-                        alert('✅ 儲存成功！');
-                        goToHistory();
-                    } catch (error) {
-                        console.error('儲存失敗:', error);
-                        alert(`儲存失敗：${error.message}`);
+                            logs: eventLogs.value,
+                            totalAmount: totalAmountAsTwd.value,
+                            rates: eventRates.value,
+                            lastUpdatedAt: serverTimestamp()
+                        };
+                        await updateDoc(doc(db, 'events', editEventId.value), payload);
+                    } catch (e) {
+                        console.error(e);
                     } finally {
                         isSaving.value = false;
                     }
                 };
 
-                const loadHistory = async () => {
-                    if (!db) return;
-                    isLoadingHistory.value = true;
-                    try {
-                        const userEventsRef = collection(db, `users/${currentUser.value.uid}/events`);
-                        const q = query(userEventsRef, orderBy('createdAt', 'desc'));
-                        const querySnapshot = await getDocs(q);
-                        
-                        historyList.value = querySnapshot.docs.map(doc => {
-                            const data = doc.data();
-                            return {
-                                id: doc.id,
-                                settlements: calcSettlements(data.persons || [], data.expenses || []),
-                                ...data
-                            };
-                        });
-                    } catch (error) {
-                        console.error('讀取歷史失敗:', error);
-                        if (error.code === 'permission-denied') {
-                             alert('讀取失敗：權限不足。請檢查 Firestore Rules。');
+                const handleTitleChange = () => { if (editEventId.value) syncStateToCloud(); };
+                const closeRateModal = () => { showRateModal.value = false; if (editEventId.value) syncStateToCloud(); };
+
+                const subscribeToEvent = (id) => {
+                    onSnapshot(doc(db, 'events', id), (snap) => {
+                        if (!snap.exists()) return;
+                        const d = snap.data();
+                        const isRemote = !snap.metadata.hasPendingWrites;
+
+                        if (d.title && d.title !== eventTitle.value) eventTitle.value = d.title;
+                        persons.value = d.persons || [];
+                        expenses.value = d.expenses || [];
+                        eventLogs.value = d.logs || [];
+                        if (d.rates) eventRates.value = d.rates;
+                        if (d.collaboratorUids) collaboratorUids.value = d.collaboratorUids;
+                        if (d.ownerUid) ownerUid.value = d.ownerUid;
+
+                        if (persons.value.length > 0) personIdCounter = Math.max(...persons.value.map(p => p.id)) + 1;
+                        if (expenses.value.length > 0) expenseIdCounter = Math.max(...expenses.value.map(e => e.id)) + 1;
+
+                        nextTick(() => { if (showChart.value) updateChartDraw(); });
+                        if (isRemote) {
+                            showToast('⚡ 遠端資料即時連動更新！');
                         }
+                    });
+                };
+
+                const eventRates = ref({ 'TWD': 1, 'THB': 0.9, 'JPY': 0.22, 'USD': 32.5, 'KRW': 0.024 });
+                const showRateModal = ref(false);
+                const showChart = ref(false);
+
+                const isSaving = ref(false);
+                const editEventId = ref(null);
+
+                const ownerUid = ref(null);
+                const collaboratorUids = ref([]);
+
+                const isVisitor = computed(() => {
+                    return editEventId.value && currentUser.value && ownerUid.value !== currentUser.value.uid && (!collaboratorUids.value || !collaboratorUids.value.includes(currentUser.value.uid));
+                });
+                const isReadOnly = computed(() => isVisitor.value);
+
+                const selectedIdentity = ref("");
+                const isClaiming = ref(false);
+
+                const claimIdentity = async () => {
+                    if (!selectedIdentity.value || !editEventId.value || !db) return;
+                    isClaiming.value = true;
+                    try {
+                        const p = persons.value.find(x => x.id === selectedIdentity.value);
+                        await updateDoc(doc(db, 'events', editEventId.value), {
+                            collaboratorUids: arrayUnion(currentUser.value.uid)
+                        });
+                        showToast(`🎉 歡迎加入！已確認您為 ${p.name}。專案已存入歷史紀錄。`);
+                    } catch (e) {
+                        showToast('身份綁定失敗，請確認 Firebase Rules 權限設定。');
                     } finally {
-                        isLoadingHistory.value = false;
+                        isClaiming.value = false;
                     }
                 };
 
-                const restoreEvent = (docItem) => {
-                    if (!confirm('載入此紀錄將會覆蓋您目前的變更進度，確定要繼續嗎？')) return;
-                    
-                    eventTitle.value = docItem.title;
-                    persons.value = docItem.persons;
-                    expenses.value = docItem.expenses;
-                    
-                    if (persons.value.length > 0) {
-                        personIdCounter = Math.max(...persons.value.map(p => p.id)) + 1;
+                const toastMsg = ref('');
+                const showToast = (msg) => { toastMsg.value = msg; setTimeout(() => { toastMsg.value = ''; }, 3000); };
+                const confirmModal = ref({ show: false, message: '', title: '', resolve: null });
+                const showConfirm = (title, message) => new Promise(resolve => confirmModal.value = { show: true, title, message, resolve });
+                const closeConfirm = res => { if (confirmModal.value.resolve) confirmModal.value.resolve(res); confirmModal.value.show = false; };
+                const promptModal = ref({ show: false, message: '', title: '', inputVal: '', resolve: null });
+                const showPrompt = (title, message, defaultVal) => new Promise(resolve => promptModal.value = { show: true, title, message, inputVal: defaultVal, resolve });
+                const closePrompt = res => { if (promptModal.value.resolve) promptModal.value.resolve(res); promptModal.value.show = false; };
+
+                let personIdCounter = 1;
+                let expenseIdCounter = 1;
+
+                function getEmptyExpenseObject() {
+                    return { description: '', amount: null, currency: 'TWD', payerId: '', involvedPersonIds: [], fractionalAmounts: {} };
+                }
+
+                // Initializer
+                onMounted(() => {
+                    try { recentContacts.value = JSON.parse(localStorage.getItem('splitBillContacts')) || []; } catch (e) { }
+                    if (!auth) return;
+
+                    onAuthStateChanged(auth, async (user) => {
+                        if (!user) { window.location.href = './index.html'; return; }
+
+                        let hasAccess = false;
+                        const ADMIN_EMAILS = ['olga59.wu@gmail.com', 'chipang59@gmail.com'];
+                        if (user.email && ADMIN_EMAILS.includes(user.email)) {
+                            hasAccess = true;
+                        } else if (user.email && db) {
+                            try {
+                                const snap = await getDoc(doc(db, 'whitelist', user.email));
+                                hasAccess = snap.exists();
+                            } catch (e) { }
+                        }
+
+                        if (!hasAccess) {
+                            await signOut(auth);
+                            alert('抱歉，此為私人封閉環境，您的信箱未在白名單內。');
+                            window.location.href = './index.html';
+                            return;
+                        }
+
+                        currentUser.value = user;
+                        isCheckingAuth.value = false;
+
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const viewId = urlParams.get('view');
+
+                        let d = null;
+                        const editDocData = sessionStorage.getItem('editDoc');
+                        if (editDocData) {
+                            try { d = JSON.parse(editDocData); } catch (e) { }
+                            sessionStorage.removeItem('editDoc');
+                        }
+
+                        if (viewId) {
+                            editEventId.value = viewId;
+                            persons.value = [];
+                            expenses.value = [];
+                            subscribeToEvent(viewId);
+                        } else if (d && d.id) {
+                            editEventId.value = d.id;
+                            eventTitle.value = d.title || '';
+                            if (d.persons) persons.value = d.persons;
+                            if (d.expenses) expenses.value = d.expenses;
+                            ownerUid.value = d.ownerUid || user.uid;
+                            if (d.collaboratorUids) collaboratorUids.value = d.collaboratorUids;
+
+                            subscribeToEvent(d.id);
+                        } else {
+                            let sn = localStorage.getItem('mySplitBillName');
+                            if (!sn) { sn = user.displayName || '我'; localStorage.setItem('mySplitBillName', sn); }
+                            myPreferredName.value = sn;
+                            persons.value = [{ id: 1, name: sn }];
+                            personIdCounter = 2;
+                            newExpense.value.involvedPersonIds = [1];
+                        }
+
+                        nextTick(() => initChart());
+                    });
+                });
+
+                const handleSignOut = async () => { if (auth) await signOut(auth); };
+                const newPersonName = ref('');
+
+                const changeMyName = async () => {
+                    const sn = await showPrompt('設定專屬暱稱', '未來開新單時將預設為這個名字。', myPreferredName.value);
+                    if (sn && sn.trim()) {
+                        myPreferredName.value = sn.trim();
+                        localStorage.setItem('mySplitBillName', myPreferredName.value);
+                        if (persons.value.length > 0 && persons.value[0].id === 1) persons.value[0].name = myPreferredName.value;
+                        showToast('個人暱稱更新完成！');
                     }
-                    if (expenses.value.length > 0) {
-                        expenseIdCounter = Math.max(...expenses.value.map(e => e.id)) + 1;
+                };
+
+                const filteredContacts = computed(() => {
+                    let ex = persons.value.map(p => p.name.toLowerCase());
+                    let f = recentContacts.value.filter(c => !ex.includes(c.toLowerCase()));
+                    if (newPersonName.value) f = f.filter(c => c.toLowerCase().includes(newPersonName.value.toLowerCase()));
+                    return f.slice(0, 10);
+                });
+
+                const addPerson = () => {
+                    let n = newPersonName.value.trim();
+                    if (!n || persons.value.some(p => p.name === n)) return;
+                    const newId = personIdCounter++;
+                    persons.value.push({ id: newId, name: n });
+                    newPersonName.value = '';
+
+                    if (!newExpense.value.involvedPersonIds.includes(newId)) {
+                        newExpense.value.involvedPersonIds.push(newId);
                     }
+
+                    let contacts = Array.from(new Set([n, ...recentContacts.value])).slice(0, 30);
+                    recentContacts.value = contacts; localStorage.setItem('splitBillContacts', JSON.stringify(contacts));
+
+                    addSystemLog(`${myPreferredName.value} 加入了分攤夥伴: ${n}`);
+                };
+                const fastAddPerson = (n) => { newPersonName.value = n; addPerson(); };
+                const removePerson = (id) => {
+                    if (expenses.value.some(e => e.payerId === id || e.involvedPersonIds.includes(id))) { showToast('無法刪除：該員已牽涉在明細中'); return; }
+                    const p = persons.value.find(per => per.id === id);
+                    persons.value = persons.value.filter(p => p.id !== id);
+                    if (p) addSystemLog(`${myPreferredName.value} 移除了夥伴: ${p.name}`);
+                };
+
+                const addExpense = () => {
+                    let e = newExpense.value;
+                    if (!e.payerId || !e.description || !e.amount || e.involvedPersonIds.length === 0) return;
+
+                    e.fractionalAmounts = e.fractionalAmounts || {};
+                    // Cleanup invisible fractionals
+                    Object.keys(e.fractionalAmounts).forEach(k => { if (!e.involvedPersonIds.includes(Number(k))) delete e.fractionalAmounts[k]; });
+
+                    // Attach static exchange rate snapshot for stability
+                    let clone = JSON.parse(JSON.stringify(e));
+                    clone.exchangeRate = eventRates.value[clone.currency] || 1;
+
+                    if (editingExpenseId.value) {
+                        const idx = expenses.value.findIndex(x => x.id === editingExpenseId.value);
+                        if (idx > -1) expenses.value[idx] = { ...clone, id: editingExpenseId.value };
+                        addSystemLog(`${myPreferredName.value} 更新了明細: ${clone.description}`);
+                        showToast('已更新明細金流');
+                    } else {
+                        clone.id = expenseIdCounter++;
+                        expenses.value.unshift(clone);
+                        addSystemLog(`${myPreferredName.value} 登錄了花費: ${clone.description} (${clone.amount})`);
+                    }
+                    cancelEditExpense();
+                };
+
+                const startEditExpense = (e) => {
+                    editingExpenseId.value = e.id;
+                    newExpense.value = JSON.parse(JSON.stringify(e));
+                    window.scrollTo({ top: 300, behavior: 'smooth' });
+                };
+                const cancelEditExpense = () => {
+                    editingExpenseId.value = null;
+                    newExpense.value = getEmptyExpenseObject();
                     newExpense.value.involvedPersonIds = persons.value.map(p => p.id);
-                    
-                    currentPage.value = 'home';
+                };
+                const removeExpense = (id) => {
+                    const e = expenses.value.find(ex => ex.id === id);
+                    expenses.value = expenses.value.filter(x => x.id !== id);
+                    if (editingExpenseId.value === id) cancelEditExpense();
+                    if (e) addSystemLog(`${myPreferredName.value} 刪除了明細: ${e.description}`);
                 };
 
-                const formatDate = (timestamp) => {
-                    if (!timestamp) return '';
-                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-                    return date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+                const getPersonName = (id) => { const p = persons.value.find(p => p.id === id); return p ? p.name : '...'; };
+
+                const totalAmountAsTwd = computed(() => {
+                    let t = 0;
+                    expenses.value.forEach(e => { t += e.amount * (e.exchangeRate || 1); });
+                    return Math.round(t);
+                });
+
+                // The Settlement Logic (Matches latest fractional requirement)
+                const settlements = computed(() => {
+                    let bals = {}; persons.value.forEach(p => bals[p.id] = 0);
+                    expenses.value.forEach(exp => {
+                        let totalTwd = exp.amount * (exp.exchangeRate || 1);
+                        bals[exp.payerId] += totalTwd;
+
+                        let dynTotal = totalTwd;
+                        let eqCount = 0;
+                        exp.involvedPersonIds.forEach(pid => {
+                            let fixed = exp.fractionalAmounts ? exp.fractionalAmounts[pid] : undefined;
+                            if (fixed) {
+                                let fixedTwd = fixed * (exp.exchangeRate || 1);
+                                bals[pid] -= fixedTwd; dynTotal -= fixedTwd;
+                            } else { eqCount++; }
+                        });
+
+                        if (eqCount > 0 && dynTotal > 0) {
+                            let sp = dynTotal / eqCount;
+                            exp.involvedPersonIds.forEach(pid => { if (!exp.fractionalAmounts || !exp.fractionalAmounts[pid]) bals[pid] -= sp; });
+                        }
+                    });
+
+                    Object.keys(bals).forEach(k => bals[k] = Math.round(bals[k]));
+                    let dr = [], cr = [];
+                    for (let [id, val] of Object.entries(bals)) {
+                        if (val < 0) dr.push({ id: Number(id), amt: -val }); else if (val > 0) cr.push({ id: Number(id), amt: val });
+                    }
+                    dr.sort((a, b) => b.amt - a.amt); cr.sort((a, b) => b.amt - a.amt);
+                    let res = [], i = 0, j = 0;
+                    while (i < dr.length && j < cr.length) {
+                        let dt = dr[i], ct = cr[j];
+                        let flow = Math.min(dt.amt, ct.amt);
+                        if (flow > 0) res.push({ from: getPersonName(dt.id), to: getPersonName(ct.id), amount: flow });
+                        dt.amt -= flow; ct.amt -= flow;
+                        if (dt.amt <= 0) i++; if (ct.amt <= 0) j++;
+                    }
+                    return res;
+                });
+
+                // Chart Engine
+                let expenseChart = null;
+                const initChart = () => {
+                    const ctx = document.getElementById('expenseChart');
+                    if (!ctx) return;
+                    expenseChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: { labels: [], datasets: [{ data: [], backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e'], borderWidth: 2, borderColor: 'transparent' }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: document.documentElement.classList.contains('dark') ? '#cbd5e1' : '#475569' } } } }
+                    });
+                    updateChartDraw();
+                };
+                const updateChartDraw = () => {
+                    if (!expenseChart) return;
+                    let pMap = {}; persons.value.forEach(p => pMap[p.id] = 0);
+                    expenses.value.forEach(exp => { pMap[exp.payerId] += exp.amount * (exp.exchangeRate || 1); });
+                    let lbls = [], dats = [];
+                    for (let pid in pMap) { if (pMap[pid] > 0) { lbls.push(getPersonName(Number(pid))); dats.push(Math.round(pMap[pid])); } }
+                    expenseChart.data.labels = lbls; expenseChart.data.datasets[0].data = dats;
+                    expenseChart.update();
+                };
+                watch(expenses, () => { if (showChart.value) updateChartDraw(); }, { deep: true });
+                watch(showChart, (val) => { if (val) setTimeout(updateChartDraw, 100); });
+
+                // Export Engine
+                const exportImageReport = async () => {
+                    const el = document.getElementById('receiptCapture');
+                    try {
+                        showToast('渲染頂級收據圖中...');
+                        el.classList.remove('-left-[9999px]'); el.classList.add('left-[9999px]');
+                        const canvas = await html2canvas(el, { scale: 3, useCORS: true, backgroundColor: null });
+                        el.classList.add('-left-[9999px]'); el.classList.remove('left-[9999px]');
+                        canvas.toBlob(async blob => {
+                            if (!blob) return;
+                            try {
+                                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                                showToast('✅ 已複製收據圖片至剪貼簿！');
+                            } catch (e) {
+                                const a = document.createElement('a'); a.download = `收據-${eventTitle.value}.png`;
+                                a.href = URL.createObjectURL(blob); a.click(); showToast('已轉換為圖片下載');
+                            }
+                        }, 'image/png');
+                    } catch (e) { el.classList.add('-left-[9999px]'); el.classList.remove('left-[9999px]'); }
+                };
+
+                const saveToFirebase = async () => {
+                    if (!db) return;
+                    const isNewEvent = !editEventId.value;
+                    const actionName = isNewEvent ? '新建單據' : '更新發布';
+
+                    const confirmRes = await showConfirm(`確定${actionName}至同步庫`, `確認將「${eventTitle.value || '未命名活動'}」發布至雲端？`);
+                    if (!confirmRes) return;
+                    isSaving.value = true;
+                    try {
+                        const payload = { title: eventTitle.value || '未命名活動', persons: persons.value, expenses: expenses.value, logs: eventLogs.value, totalAmount: totalAmountAsTwd.value, rates: eventRates.value, lastUpdatedAt: serverTimestamp() };
+                        if (!isNewEvent) {
+                            await updateDoc(doc(db, 'events', editEventId.value), payload);
+                            showToast('💾 同步完成！檔案已安全更新。');
+                        } else {
+                            payload.createdAt = serverTimestamp();
+                            payload.ownerUid = currentUser.value.uid;
+                            payload.collaboratorUids = [currentUser.value.uid];
+                            payload.isArchived = false;
+                            await addDoc(collection(db, 'events'), payload);
+
+                            // Initialize everything for the next new event
+                            eventTitle.value = '';
+                            persons.value = [{ id: 1, name: myPreferredName.value }];
+                            personIdCounter = 2;
+                            expenses.value = [];
+                            expenseIdCounter = 1;
+                            newExpense.value = getEmptyExpenseObject();
+                            newExpense.value.involvedPersonIds = [1];
+                            editingExpenseId.value = null;
+                            showChart.value = false;
+                            eventLogs.value = [];
+
+                            showToast('💾 建立送出！表單已重置清空，可接續新增。');
+                        }
+                    } catch (e) { showToast('寫入失敗'); } finally { isSaving.value = false; }
                 };
 
                 return {
-                    isCheckingAuth,
-                    currentUser,
-                    currentPage,
-                    handleSignOut,
-                    goToHistory,
-                    createNewEvent,
-
-                    eventTitle,
-                    persons,
-                    newPersonName,
-                    expenses,
-                    newExpense,
-                    
-                    addPerson,
-                    removePerson,
-                    addExpense,
-                    removeExpense,
-                    getPersonName,
-                    
-                    totalAmount,
-                    settlements,
-
-                    isSaving,
-                    historyList,
-                    isLoadingHistory,
-                    saveToFirebase,
-                    loadHistory,
-                    restoreEvent,
-                    formatDate
+                    isCheckingAuth, currentUser, handleSignOut, myPreferredName, changeMyName,
+                    isReadOnly, ownerUid,
+                    eventTitle, persons, newPersonName, filteredContacts, getPersonName,
+                    addPerson, fastAddPerson, removePerson,
+                    expenses, newExpense, addExpense, removeExpense, startEditExpense, cancelEditExpense, editingExpenseId,
+                    eventLogs,
+                    eventRates, showRateModal, showChart,
+                    totalAmountAsTwd, settlements, saveToFirebase, isSaving, exportImageReport,
+                    toastMsg, confirmModal, closeConfirm, promptModal, closePrompt,
+                    handleTitleChange, closeRateModal,
+                    isVisitor, selectedIdentity, isClaiming, claimIdentity
                 };
             }
         }).mount('#app');
     </script>
 </body>
+
 </html>

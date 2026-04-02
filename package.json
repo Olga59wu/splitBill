@@ -1,0 +1,12 @@
+{
+  "name": "split-bill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "分帳小幫手",
+  "scripts": {
+    "deploy": "firebase deploy"
+  },
+  "volta": {
+    "node": "24.14.0"
+  }
+}

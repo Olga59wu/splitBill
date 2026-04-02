@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>歷史紀錄 - 分帳小幫手</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#f8fafc">
+    <link rel="apple-touch-icon" href="./icon-192x192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script>tailwind.config = { darkMode: 'class' };</script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        [v-cloak] {
+            display: none;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .toast-enter-active,
+        .toast-leave-active {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .toast-enter-from,
+        .toast-leave-to {
+            opacity: 0;
+            transform: translateY(-20px) translateX(-50%);
+        }
+
+        .toast-enter-to,
+        .toast-leave-from {
+            opacity: 1;
+            transform: translateY(0) translateX(-50%);
+        }
+
+        @keyframes flashGreen {
+            0% {
+                background-color: rgba(16, 185, 129, 0.3);
+                transform: scale(1.05);
+            }
+
+            100% {
+                background-color: transparent;
+                transform: scale(1);
+            }
+        }
+
+        .animate-flash-green {
+            animation: flashGreen 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 8px;
+            padding: 4px 8px;
+            margin: -4px -8px;
+        }
+    </style>
+</head>
+
+<body
+    class="text-slate-800 dark:text-slate-200 antialiased min-h-screen pb-16 selection:bg-emerald-100 selection:text-emerald-900 dark:selection:bg-emerald-900/50 dark:selection:text-emerald-100 transition-colors duration-500">
+
+    <div id="app" v-cloak>
+
+        <!-- 專屬單筆請款圖 (離屏渲染) -->
+        <div class="fixed -left-[9999px] top-0 pointer-events-none z-[-100]">
+            <div id="receipt-export-container"
+                class="w-[380px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col">
+                <div
+                    class="flex justify-between items-start mb-6 border-b border-slate-100 dark:border-slate-800/60 pb-5">
+                    <div>
+                        <h2 class="font-extrabold text-slate-800 dark:text-slate-100 text-xl tracking-wide">個別請款單</h2>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 font-bold mt-1.5 uppercase tracking-wider">
+                            SplitBill Notification</p>
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-500 text-2xl shadow-sm border border-emerald-100 dark:border-emerald-800/50">
+                        💸
+                    </div>
+                </div>
+
+                <div
+                    class="flex flex-col items-center justify-center py-8 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50 mb-6 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
+                    <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">
+                        本次應給付總額</p>
+                    <div
+                        class="text-[40px] font-black text-slate-900 dark:text-white tabular-nums tracking-tighter drop-shadow-sm leading-none">
+                        NT$ {{ activeReceipt.amount }}</div>
+                </div>
+
+                <div
+                    class="flex justify-between items-center bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
+                    <div class="flex flex-col flex-1 overflow-hidden">
+                        <span
+                            class="text-[10px] font-extrabold text-rose-500 dark:text-rose-400 uppercase tracking-widest mb-1">付款方
+                            (Owes)</span>
+                        <span
+                            class="text-xl font-black text-slate-800 dark:text-slate-200 leading-normal pb-1 break-words">{{
+                            activeReceipt.from }}</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center px-4 shrink-0">
+                        <span
+                            class="text-[9px] text-slate-400 dark:text-slate-500 font-bold mb-1 tracking-widest">轉交給</span>
+                        <svg class="h-6 w-6 text-emerald-400 drop-shadow-sm" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </div>
+                    <div class="flex flex-col flex-1 items-end overflow-hidden">
+                        <span
+                            class="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-1">收款方
+                            (Gets)</span>
+                        <span
+                            class="text-xl font-black text-emerald-700 dark:text-emerald-400 leading-normal pb-1 break-words text-right">{{
+                            activeReceipt.to }}</span>
+                    </div>
+                </div>
+
+                <div class="mt-8 text-center flex flex-col items-center gap-1 opacity-50">
+                    <div class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                        POWERED BY SPLITBILL APP</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Modal -->
+        <transition name="toast">
+            <div v-if="showAdminModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-slate-900/40 dark:bg-slate-900/60 backdrop-blur-sm"
+                    @click="showAdminModal = false"></div>
+                <div
+                    class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl relative z-10 overflow-hidden border border-slate-100 dark:border-slate-800">
+                    <div class="p-6 md:p-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                                <span>🛡️</span> 白名單管理
+                            </h3>
+                            <button @click="showAdminModal = false"
+                                class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2">✕</button>
+                        </div>
+                        <div class="mb-6 flex gap-2">
+                            <input v-model.trim="newWhitelistEmail" @keyup.enter="addWhitelist" type="email"
+                                placeholder="輸入要授權的 Google 信箱"
+                                class="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 font-bold focus:border-slate-900 dark:focus:border-white outline-none dark:text-white transition-colors">
+                            <button @click="addWhitelist" :disabled="isManagingWhitelist || !newWhitelistEmail"
+                                class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold px-4 py-2 rounded-xl disabled:opacity-50 whitespace-nowrap">新增</button>
+                        </div>
+                        <div
+                            class="max-h-60 overflow-y-auto pr-2 shrink-0 border-t border-slate-100 dark:border-slate-800 pt-4">
+                            <div v-if="isManagingWhitelist" class="text-center py-4 text-slate-400"><svg
+                                    class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg></div>
+                            <ul v-else class="space-y-2">
+                                <li
+                                    class="flex justify-between items-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-medium text-sm break-all">
+                                    olga59.wu@gmail.com <span
+                                        class="shrink-0 ml-2 text-xs bg-emerald-200 dark:bg-emerald-800 px-2 py-1 rounded">管理員</span>
+                                </li>
+                                <li
+                                    class="flex justify-between items-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-medium text-sm break-all">
+                                    chipang59@gmail.com <span
+                                        class="shrink-0 ml-2 text-xs bg-emerald-200 dark:bg-emerald-800 px-2 py-1 rounded">管理員</span>
+                                </li>
+                                <li v-for="email in whitelistEmails" :key="email"
+                                    class="flex justify-between items-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium border border-slate-100 dark:border-slate-700 text-sm break-all">
+                                    {{ email }}
+                                    <button @click="removeWhitelist(email)"
+                                        class="shrink-0 ml-2 text-red-500 hover:text-red-700 p-1 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded transition-colors"
+                                        title="移除權限">🗑️</button>
+                                </li>
+                                <li v-if="whitelistEmails.length === 0" class="text-center text-sm text-slate-400 py-4">
+                                    尚無其他受邀信箱</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- 客製化 Toast -->
+        <transition name="toast">
+            <div v-if="toastMsg"
+                class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 bg-slate-900 dark:bg-slate-800 border border-slate-700 dark:border-slate-600 text-white text-sm font-semibold rounded-full shadow-[0_10px_40px_rgb(0,0,0,0.2)] flex items-center gap-3">
+                <span class="text-base">🔔</span> {{ toastMsg }}
+            </div>
+        </transition>
+
+        <!-- 客製化 Confirm Modal -->
+        <div v-if="confirmModal.show"
+            class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 dark:border-slate-800">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">{{ confirmModal.title || '系統提示' }}
+                </h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">{{ confirmModal.message }}
+                </p>
+                <div class="flex gap-3 justify-end">
+                    <button @click="closeConfirm(false)"
+                        class="px-4 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors">取消</button>
+                    <button @click="closeConfirm(true)"
+                        :class="['px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm transition-all focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-slate-900', confirmModal.isDanger ? 'bg-rose-500 hover:bg-rose-600 focus:ring-rose-500' : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 focus:ring-slate-900']">
+                        確定
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="isCheckingAuth"
+            class="min-h-screen flex items-center justify-center flex-col bg-slate-50 dark:bg-slate-950">
+            <svg class="animate-spin h-10 w-10 text-slate-900 dark:text-slate-100 mx-auto"
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-80" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+        </div>
+
+        <div v-else>
+            <!-- 導覽列 -->
+            <nav
+                class="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-50 transition-colors">
+                <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-xl shadow-inner border border-slate-200/50 dark:border-slate-700/50">
+                            💳</div>
+                        <div>
+                            <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+                                帳務總覽</h1>
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">所有活動紀錄</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button v-if="isAdminUser" @click="openAdminModal"
+                            class="p-2 text-xl hover:scale-110 transition-transform" title="白名單管理">🛡️</button>
+                        <a href="./split_bill.html"
+                            class="px-4 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm rounded-xl shadow-sm hover:shadow-md hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 flex items-center gap-2">
+                            <span>➕</span><span class="hidden sm:inline">建立新活動</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="max-w-5xl mx-auto space-y-6 md:space-y-8 mt-6 md:mt-10 px-4 md:px-8">
+                <!-- 歷史紀錄 -->
+                <div
+                    class="animate-fade-in bg-white dark:bg-slate-900 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none border border-slate-100 dark:border-slate-800 p-6 md:p-10 min-h-[50vh] transition-colors">
+                    <div
+                        class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-slate-100 dark:border-slate-800 pb-6">
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                            歷史目錄</h2>
+                        <div class="flex gap-3 w-full md:w-auto">
+                            <button @click="loadHistory"
+                                class="flex-1 md:flex-none justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-transparent dark:border-slate-700 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all">
+                                重新載入
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabs 封存切換 -->
+                    <div class="flex gap-4 mb-6 relative overflow-x-auto no-scrollbar">
+                        <button @click="currentTab = 'active'"
+                            :class="['shrink-0 pb-2 text-sm font-bold transition-colors border-b-2 z-10', currentTab === 'active' ? 'border-slate-900 dark:border-white text-slate-900 dark:text-white' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300']">進行中
+                            ({{ displayedHistory.active.length }})</button>
+                        <button @click="currentTab = 'archived'"
+                            :class="['shrink-0 pb-2 text-sm font-bold transition-colors border-b-2 z-10', currentTab === 'archived' ? 'border-slate-900 dark:border-white text-slate-900 dark:text-white' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300']">已封存
+                            ({{ displayedHistory.archived.length }})</button>
+                        <button @click="currentTab = 'grand_total'"
+                            :class="['shrink-0 pb-2 text-sm font-bold transition-colors border-b-2 z-10', currentTab === 'grand_total' ? 'border-amber-500 dark:border-amber-400 text-amber-600 dark:text-amber-400' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300']">持續累積總帳</button>
+                        <div class="absolute bottom-0 left-0 w-full h-[2px] bg-slate-100 dark:bg-slate-800 z-0"></div>
+                    </div>
+
+                    <div v-if="isLoadingHistory" class="flex justify-center py-20">
+                        <svg class="animate-spin h-8 w-8 text-slate-300 dark:text-slate-600"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </div>
+
+                    <div v-else-if="currentTab === 'grand_total'" class="space-y-4">
+                        <div id="grandTotalCard"
+                            class="bg-amber-50/50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700/50 rounded-xl p-6 shadow-sm relative overflow-hidden">
+                            <div class="mb-6 border-b border-amber-200/50 dark:border-amber-800/50 pb-4 pr-14">
+                                <h3
+                                    class="font-extrabold text-xl text-amber-900 dark:text-amber-400 flex items-center gap-2">
+                                    跨域歷史累積總算匯總
+                                    <span
+                                        class="text-[10px] bg-amber-200 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider">實時演算</span>
+                                </h3>
+                                <div
+                                    class="text-sm text-amber-700 dark:text-amber-500/80 font-semibold mt-2 data-html2canvas-ignore">
+                                    將歷年來所有活動記錄混合計算（包含已封存），得出最終還應執行的淨額收復轉帳。</div>
+                            </div>
+
+                            <button @click="copyGrandTotalImage" :disabled="isExporting"
+                                class="absolute top-6 right-6 flex items-center justify-center w-10 h-10 bg-amber-200/50 hover:bg-amber-200 dark:bg-amber-800/50 dark:hover:bg-amber-700 text-amber-700 dark:text-amber-400 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50 data-html2canvas-ignore"
+                                title="複製為圖片">
+                                <span v-if="isExporting" class="animate-spin text-sm">⏳</span>
+                                <span v-else class="text-xl">📸</span>
+                            </button>
+
+                            <div v-if="grandTotalSummary.settlements.length === 0"
+                                class="text-center text-sm font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-lg p-6">
+                                歷史至今所有的帳務皆已達成完美平衡，無須任何額外轉帳！🎉
+                            </div>
+                            <div v-else class="space-y-3 mt-4">
+                                <div v-for="(stl, stlIdx) in grandTotalSummary.settlements" :key="'gttl-'+stlIdx"
+                                    :id="'stl-row-'+stlIdx"
+                                    class="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-slate-900 rounded-lg p-5 border border-slate-200 dark:border-slate-800 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-none gap-4">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-3">
+                                            <span class="text-xl font-black text-slate-900 dark:text-white">{{ stl.from
+                                                }}</span>
+                                            <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                    d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                            </svg>
+                                            <span class="text-xl font-black text-emerald-600 dark:text-emerald-400">{{
+                                                stl.to }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between sm:justify-end gap-5">
+                                        <div class="font-black text-slate-900 dark:text-white tabular-nums tracking-tight text-2xl drop-shadow-sm transition-all"
+                                            :class="{'animate-flash-green': flashGrandTotal}">NT$ {{ stl.amount }}</div>
+                                        <div class="flex items-center gap-2" data-html2canvas-ignore>
+                                            <button @click="copyRowImage(stlIdx, stl)"
+                                                :disabled="exportingRow === stlIdx"
+                                                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg shadow-sm active:scale-95 transition-all outline-none"
+                                                title="產生單筆請款圖">
+                                                <span v-if="exportingRow === stlIdx"
+                                                    class="animate-spin text-sm">⏳</span>
+                                                <span v-else class="text-sm">📸</span>
+                                            </button>
+                                            <button @click="markSettled(stl)"
+                                                class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-lg shadow-sm active:scale-95 transition-all outline-none">
+                                                結清
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-else-if="currentList.length === 0"
+                        class="text-center py-20 text-slate-400 dark:text-slate-500 font-medium">
+                        目錄空空如也。
+                    </div>
+
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div v-for="docItem in currentList" :key="docItem.id"
+                            class="group relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-lg p-5 md:p-6 hover:shadow-lg dark:hover:border-slate-600 hover:border-slate-300 transition-all flex flex-col cursor-pointer"
+                            @click="restoreEventAndRedirect(docItem)">
+                            <div class="flex justify-between items-start mb-3">
+                                <h3 class="font-bold text-lg text-slate-900 dark:text-white truncate pr-4">{{
+                                    docItem.title || '未命名活動' }}</h3>
+                                <span
+                                    class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded">{{
+                                    formatDate(docItem.createdAt) }}</span>
+                            </div>
+
+                            <div
+                                class="text-xs text-slate-500 dark:text-slate-400 font-semibold mb-5 flex flex-wrap gap-x-4 gap-y-2">
+                                <span class="bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded">👥 {{
+                                    docItem.persons.length }} 人</span>
+                                <span class="bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded">🧾 {{
+                                    docItem.expenses.length }} 筆</span>
+                                <span
+                                    class="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded hidden sm:inline">總計
+                                    ${{ docItem.totalAmount }}</span>
+                            </div>
+
+                            <div class="mt-auto">
+                                <div class="flex gap-2 mb-4">
+                                    <button @click="copyInviteLink($event, docItem.id)"
+                                        class="flex-1 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-emerald-200 dark:border-emerald-800/50">
+                                        🔗 分享
+                                    </button>
+                                    <button v-if="!docItem.isArchived" @click="toggleArchive($event, docItem.id, true)"
+                                        class="flex-1 py-1.5 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-slate-200 dark:border-none">
+                                        📦 封存
+                                    </button>
+                                    <button v-else @click="toggleArchive($event, docItem.id, false)"
+                                        class="flex-1 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800/50">
+                                        📤 復原
+                                    </button>
+                                    <button @click="deleteItem($event, docItem.id)"
+                                        class="px-3 py-1.5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-lg text-xs font-bold transition-colors flex items-center justify-center border border-rose-200 dark:border-rose-800/40">
+                                        🗑️
+                                    </button>
+                                </div>
+                                <div v-if="docItem.settlements && docItem.settlements.length > 0"
+                                    class="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 space-y-1.5 border border-slate-100 dark:border-slate-700/50">
+                                    <div v-for="(stl, stlIdx) in docItem.settlements" :key="'stl-'+stlIdx"
+                                        class="flex justify-between items-center text-[13px]">
+                                        <div class="font-medium text-slate-600 dark:text-slate-300 truncate mr-2">{{
+                                            stl.from }} <span
+                                                class="text-[10px] text-slate-300 dark:text-slate-600 mx-1">▶</span> {{
+                                            stl.to }}</div>
+                                        <div class="font-bold text-emerald-600 dark:text-emerald-400 shrink-0">${{
+                                            stl.amount }}</div>
+                                    </div>
+                                </div>
+                                <div v-else-if="docItem.expenses && docItem.expenses.length > 0"
+                                    class="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 text-center text-xs font-bold text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-none">
+                                    無需轉帳
+                                </div>
+                                <div
+                                    class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50 font-semibold text-center text-xs text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-slate-300 transition-colors">
+                                    點擊載入並查閱明細
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth, db } from './firebase-config.js';
+        import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+        import { doc, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, collection, getDocs, query, orderBy, where, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                const isCheckingAuth = ref(true);
+                const currentUser = ref(null);
+                const isAdminUser = ref(false);
+                const historyList = ref([]);
+                const isLoadingHistory = ref(false);
+                const currentTab = ref('active');
+                const flashGrandTotal = ref(false);
+
+                const grandTotalSummary = computed(() => {
+                    const evtBalances = {};
+
+                    historyList.value.forEach(doc => {
+                        if (!doc.persons || !doc.expenses) return;
+                        doc.expenses.forEach(exp => {
+                            let baseAmount = exp.amount;
+                            if (exp.currency && exp.currency !== 'TWD' && exp.exchangeRate) {
+                                baseAmount = exp.amount * exp.exchangeRate;
+                            }
+
+                            const payerName = doc.persons.find(p => p.id === exp.payerId)?.name || '未知';
+                            if (evtBalances[payerName] === undefined) evtBalances[payerName] = 0;
+                            evtBalances[payerName] += baseAmount;
+
+                            let dynamicTotal = baseAmount;
+                            let equalCount = 0;
+                            const targets = exp.involvedPersonIds || [];
+
+                            if (exp.fractionalAmounts) {
+                                targets.forEach(pid => {
+                                    const tName = doc.persons.find(p => p.id === pid)?.name || '未知';
+                                    if (exp.fractionalAmounts[pid] !== undefined && exp.fractionalAmounts[pid] !== null) {
+                                        const fixedCost = exp.fractionalAmounts[pid] * (exp.exchangeRate || 1);
+                                        if (evtBalances[tName] === undefined) evtBalances[tName] = 0;
+                                        evtBalances[tName] -= fixedCost;
+                                        dynamicTotal -= fixedCost;
+                                    } else {
+                                        equalCount++;
+                                    }
+                                });
+                            } else {
+                                equalCount = targets.length;
+                            }
+
+                            if (equalCount > 0 && dynamicTotal > 0) {
+                                const splitAmount = dynamicTotal / equalCount;
+                                targets.forEach(pid => {
+                                    if (!exp.fractionalAmounts || exp.fractionalAmounts[pid] === undefined || exp.fractionalAmounts[pid] === null) {
+                                        const tName = doc.persons.find(p => p.id === pid)?.name || '未知';
+                                        if (evtBalances[tName] === undefined) evtBalances[tName] = 0;
+                                        evtBalances[tName] -= splitAmount;
+                                    }
+                                });
+                            }
+                        });
+                    });
+
+                    Object.keys(evtBalances).forEach(k => evtBalances[k] = Math.round(evtBalances[k]));
+
+                    let debtors = [], creditors = [];
+                    for (const [name, balance] of Object.entries(evtBalances)) {
+                        if (balance < 0) debtors.push({ name, amount: -balance });
+                        else if (balance > 0) creditors.push({ name, amount: balance });
+                    }
+                    debtors.sort((a, b) => b.amount - a.amount);
+                    creditors.sort((a, b) => b.amount - a.amount);
+
+                    const settlements = [];
+                    let i = 0, j = 0;
+                    while (i < debtors.length && j < creditors.length) {
+                        const debtor = debtors[i], creditor = creditors[j];
+                        const transfer = Math.min(debtor.amount, creditor.amount);
+                        if (transfer > 0) settlements.push({ from: debtor.name, to: creditor.name, amount: Math.round(transfer) });
+                        debtor.amount -= transfer;
+                        creditor.amount -= transfer;
+                        if (debtor.amount <= 0) i++;
+                        if (creditor.amount <= 0) j++;
+                    }
+                    return { settlements };
+                });
+
+                const markSettled = async (stl) => {
+                    const isLastDebt = grandTotalSummary.value.settlements.length <= 1;
+                    const confirm = await showConfirm(
+                        '💸 轉帳與結清確認',
+                        `確認 ${stl.from} 已經轉帳或支付 ${stl.amount} 元給 ${stl.to} 嗎？\n同意後這筆欠款將正式歸零。` +
+                        (isLastDebt ? `\n\n🎉 此為總帳的最後一筆！歸零後將自動為您把目前的「進行中活動」全數移至已封存區。` : `\n\n(註：因群組內還有其他欠款尚未結清，現有活動清單將暫不封存)`)
+                    );
+                    if (!confirm) return;
+
+                    try {
+                        const payload = {
+                            title: `✅ 轉帳結清: ${stl.from} 還款給 ${stl.to}`,
+                            persons: [
+                                { id: 1, name: stl.from },
+                                { id: 2, name: stl.to }
+                            ],
+                            expenses: [
+                                {
+                                    id: 1,
+                                    payerId: 1,
+                                    description: "實際轉帳與餘額結清",
+                                    currency: "TWD",
+                                    amount: stl.amount,
+                                    involvedPersonIds: [2],
+                                    fractionalAmounts: { 2: stl.amount },
+                                    exchangeRate: 1
+                                }
+                            ],
+                            totalAmount: stl.amount,
+                            baseCurrency: "TWD",
+                            rates: { "TWD": 1 },
+                            createdAt: serverTimestamp(),
+                            lastUpdatedAt: serverTimestamp(),
+                            ownerUid: currentUser.value.uid,
+                            collaboratorUids: [currentUser.value.uid],
+                            isArchived: true
+                        };
+
+                        await addDoc(collection(db, 'events'), payload);
+
+                        if (isLastDebt) {
+                            const activeItems = displayedHistory.value.active;
+                            if (activeItems.length > 0) {
+                                const archivePromises = activeItems.map(item =>
+                                    updateDoc(doc(db, 'events', item.id), { isArchived: true })
+                                );
+                                await Promise.all(archivePromises);
+                                showToast('✅ 完美結算！最後款項已歸零，明細皆已為您封存上鎖。');
+                            } else {
+                                showToast('✅ 完美結算！所有款項已全數歸零！');
+                            }
+                        } else {
+                            showToast(`✅ 已登記 ${stl.from} 歸還給 ${stl.to} 的款項！`);
+                        }
+
+                        await loadHistory();
+                    } catch (err) {
+                        showToast('結清失敗，請確認權限或網路狀態。');
+                    }
+                };
+
+                const toastMsg = ref('');
+                const showToast = (msg) => { toastMsg.value = msg; setTimeout(() => { toastMsg.value = ''; }, 3000); };
+                const confirmModal = ref({ show: false, message: '', title: '', resolve: null, isDanger: false });
+                const showConfirm = (title, message, isDanger = false) => {
+                    return new Promise((resolve) => { confirmModal.value = { show: true, title, message, resolve, isDanger }; });
+                };
+                const closeConfirm = (res) => {
+                    if (confirmModal.value.resolve) confirmModal.value.resolve(res);
+                    confirmModal.value.show = false;
+                };
+
+                const isExporting = ref(false);
+                const copyGrandTotalImage = async () => {
+                    const targetEl = document.getElementById('grandTotalCard');
+                    if (!targetEl || typeof html2canvas === 'undefined') {
+                        showToast('截圖引擎尚未載入完成，請稍候重試。');
+                        return;
+                    }
+
+                    isExporting.value = true;
+                    try {
+                        const canvas = await html2canvas(targetEl, {
+                            scale: 2,
+                            backgroundColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#fffbeb',
+                            useCORS: true,
+                            logging: false
+                        });
+
+                        canvas.toBlob(async (blob) => {
+                            if (!blob) throw new Error('圖檔產生失敗');
+                            const item = new ClipboardItem({ 'image/png': blob });
+                            await navigator.clipboard.write([item]);
+                            showToast('📸 圖片已複製！現在可以直接貼上至 LINE 中。');
+                        });
+                    } catch (err) {
+                        showToast('截圖失敗！可能因為瀏覽器安全性權限阻擋。');
+                    } finally {
+                        isExporting.value = false;
+                    }
+                };
+
+                const activeReceipt = ref({ from: '', to: '', amount: 0 });
+                const exportingRow = ref(null);
+                const copyRowImage = async (idx, stlObj) => {
+                    exportingRow.value = idx;
+                    activeReceipt.value = { from: stlObj.from, to: stlObj.to, amount: stlObj.amount };
+
+                    await new Promise(r => setTimeout(r, 100));
+
+                    const targetEl = document.getElementById('receipt-export-container');
+                    if (!targetEl || typeof html2canvas === 'undefined') {
+                        showToast('截圖引擎尚未載入完成，請稍候重試。');
+                        exportingRow.value = null;
+                        return;
+                    }
+
+                    try {
+                        const canvas = await html2canvas(targetEl, {
+                            scale: 3,
+                            backgroundColor: null,
+                            useCORS: true,
+                            logging: false
+                        });
+                        canvas.toBlob(async (blob) => {
+                            if (!blob) throw new Error('圖檔產生失敗');
+                            const item = new ClipboardItem({ 'image/png': blob });
+                            await navigator.clipboard.write([item]);
+                            showToast('📸 高質感結帳單已產生並複製至剪貼簿！');
+                        });
+                    } catch (err) {
+                        showToast('截圖失敗！可能因為相關權限未核准。');
+                    } finally {
+                        exportingRow.value = null;
+                    }
+                };
+
+                onMounted(() => {
+                    if (!auth) {
+                        showToast("無法連線至身份驗證服務。");
+                        isCheckingAuth.value = false;
+                        return;
+                    }
+
+                    onAuthStateChanged(auth, async (user) => {
+                        if (!user) {
+                            window.location.href = './index.html';
+                        } else {
+                            let hasAccess = false;
+                            const ADMIN_EMAILS = ['olga59.wu@gmail.com', 'chipang59@gmail.com'];
+                            console.log('user.email>>>', user.email && ADMIN_EMAILS.includes(user.email))
+                            if (user.email && ADMIN_EMAILS.includes(user.email)) {
+                                hasAccess = true;
+                                isAdminUser.value = true;
+                            } else if (user.email && db) {
+                                try {
+                                    const snap = await getDoc(doc(db, 'whitelist', user.email));
+                                    hasAccess = snap.exists();
+                                } catch (e) { }
+                            }
+
+                            if (!hasAccess) {
+                                await signOut(auth);
+                                alert('抱歉，此為私人封閉環境，您的信箱未在白名單內。');
+                                window.location.href = './index.html';
+                                return;
+                            }
+
+                            currentUser.value = user;
+                            isCheckingAuth.value = false;
+
+                            loadHistory();
+                        }
+                    });
+                });
+
+                const handleSignOut = async () => {
+                    if (!auth) return;
+                    try { await signOut(auth); } catch (error) { }
+                };
+
+                const calcSettlements = (personsArray, expensesArray) => {
+                    if (!personsArray || personsArray.length === 0) return [];
+                    const balances = {};
+                    personsArray.forEach(p => balances[p.id] = 0);
+
+                    expensesArray.forEach(exp => {
+                        let baseAmount = exp.amount;
+                        if (exp.currency && exp.currency !== 'TWD' && exp.exchangeRate) {
+                            baseAmount = exp.amount * exp.exchangeRate;
+                        }
+
+                        balances[exp.payerId] += baseAmount;
+
+                        let dynamicTotal = baseAmount;
+                        let equalCount = 0;
+                        const targets = exp.involvedPersonIds;
+
+                        if (exp.fractionalAmounts) {
+                            targets.forEach(pid => {
+                                if (exp.fractionalAmounts[pid] !== undefined && exp.fractionalAmounts[pid] !== null) {
+                                    const fixedCost = exp.fractionalAmounts[pid] * (exp.exchangeRate || 1);
+                                    balances[pid] -= fixedCost;
+                                    dynamicTotal -= fixedCost;
+                                } else {
+                                    equalCount++;
+                                }
+                            });
+                        } else {
+                            equalCount = targets.length;
+                        }
+
+                        if (equalCount > 0 && dynamicTotal > 0) {
+                            const splitAmount = dynamicTotal / equalCount;
+                            targets.forEach(pid => {
+                                if (!exp.fractionalAmounts || exp.fractionalAmounts[pid] === undefined || exp.fractionalAmounts[pid] === null) {
+                                    balances[pid] -= splitAmount;
+                                }
+                            });
+                        }
+                    });
+
+                    Object.keys(balances).forEach(id => balances[id] = Math.round(balances[id]));
+
+                    let debtors = [], creditors = [];
+                    for (const [id, balance] of Object.entries(balances)) {
+                        if (balance < 0) debtors.push({ id: Number(id), amount: -balance });
+                        else if (balance > 0) creditors.push({ id: Number(id), amount: balance });
+                    }
+                    debtors.sort((a, b) => b.amount - a.amount);
+                    creditors.sort((a, b) => b.amount - a.amount);
+
+                    const results = [];
+                    let i = 0, j = 0;
+                    const getName = (id) => { const p = personsArray.find(person => person.id === id); return p ? p.name : '未知'; };
+                    while (i < debtors.length && j < creditors.length) {
+                        const debtor = debtors[i], creditor = creditors[j];
+                        const transfer = Math.min(debtor.amount, creditor.amount);
+                        if (transfer > 0) results.push({ from: getName(debtor.id), to: getName(creditor.id), amount: Math.round(transfer) });
+                        debtor.amount -= transfer;
+                        creditor.amount -= transfer;
+                        if (debtor.amount <= 0) i++;
+                        if (creditor.amount <= 0) j++;
+                    }
+                    return results;
+                };
+
+                const displayedHistory = computed(() => {
+                    return {
+                        active: historyList.value.filter(h => !h.isArchived),
+                        archived: historyList.value.filter(h => h.isArchived)
+                    };
+                });
+                const currentList = computed(() => displayedHistory.value[currentTab.value]);
+
+                watch(grandTotalSummary, (newVal, oldVal) => {
+                    if (oldVal && oldVal.settlements && isLoadingHistory.value === false) {
+                        flashGrandTotal.value = true;
+                        setTimeout(() => { flashGrandTotal.value = false; }, 1500);
+                    }
+                }, { deep: true });
+
+                let unsubHistory = null;
+                const loadHistory = async () => {
+                    if (!db) return;
+                    isLoadingHistory.value = true;
+                    try {
+                        const eventsRef = collection(db, 'events');
+                        const q = query(eventsRef);
+
+                        if (unsubHistory) unsubHistory();
+                        unsubHistory = onSnapshot(q, (querySnapshot) => {
+                            let results = [];
+                            querySnapshot.docs.forEach(docSnap => {
+                                const data = docSnap.data();
+                                if (data.collaboratorUids && data.collaboratorUids.includes(currentUser.value.uid)) {
+                                    results.push({ id: docSnap.id, settlements: calcSettlements(data.persons || [], data.expenses || []), isArchived: data.isArchived || false, ...data });
+                                }
+                            });
+
+                            results.sort((a, b) => {
+                                const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                                const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                                return tB - tA;
+                            });
+                            historyList.value = results;
+                            isLoadingHistory.value = false;
+                        });
+                    } catch (error) {
+                        showToast('清單讀取異常，請稍後重試！');
+                    }
+                };
+
+                const toggleArchive = async (e, id, archiveStatus) => {
+                    e.stopPropagation();
+                    const actionName = archiveStatus ? '封存' : '解除封存';
+                    const confirm = await showConfirm(`確定要${actionName}這筆紀錄嗎？`, archiveStatus ? '封存後將會移動到「已封存」目錄，不會從資料庫完全刪除。' : '紀錄將移回進行中目錄。');
+                    if (!confirm) return;
+                    try {
+                        await updateDoc(doc(db, 'events', id), { isArchived: archiveStatus });
+                        const itemIndex = historyList.value.findIndex(h => h.id === id);
+                        if (itemIndex > -1) historyList.value[itemIndex].isArchived = archiveStatus;
+                        showToast(`活動已${actionName}`);
+                    } catch (err) {
+                        showToast('操作失敗，請檢查權限');
+                    }
+                };
+
+                const deleteItem = async (e, id) => {
+                    e.stopPropagation();
+                    const confirm = await showConfirm('🚨 永久刪除活動', '刪除後所有參與者都會遺失這筆資料且無法還原！確定繼續嗎？', true);
+                    if (!confirm) return;
+                    try {
+                        await deleteDoc(doc(db, 'events', id));
+                        historyList.value = historyList.value.filter(h => h.id !== id);
+                        showToast('活動已永久刪除');
+                    } catch (err) {
+                        showToast('刪除拒絕，請確定已修改 Firebase 控制台的權限');
+                    }
+                };
+
+                const copyInviteLink = (e, id) => {
+                    e.stopPropagation();
+                    const link = window.location.origin + window.location.pathname.replace('history.html', 'index.html') + '?invite=' + id;
+                    navigator.clipboard.writeText(link).then(() => {
+                        showToast('✅ 邀請連結已複製到剪貼簿！');
+                    }).catch(err => {
+                        showToast('複製失敗: ' + link);
+                    });
+                };
+
+                const restoreEventAndRedirect = (docItem) => {
+                    sessionStorage.setItem('editDoc', JSON.stringify({
+                        id: docItem.id,
+                        title: docItem.title,
+                        persons: docItem.persons,
+                        expenses: docItem.expenses,
+                        baseCurrency: docItem.baseCurrency || 'TWD',
+                        ownerUid: docItem.ownerUid || (docItem.collaboratorUids ? docItem.collaboratorUids[0] : null)
+                    }));
+                    window.location.href = './split_bill.html';
+                };
+
+                const formatDate = (timestamp) => {
+                    if (!timestamp) return '';
+                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                    return date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                };
+
+                const showAdminModal = ref(false);
+                const newWhitelistEmail = ref("");
+                const whitelistEmails = ref([]);
+                const isManagingWhitelist = ref(false);
+
+                const openAdminModal = async () => {
+                    showAdminModal.value = true;
+                    if (!db) return;
+                    isManagingWhitelist.value = true;
+                    try {
+                        const snap = await getDocs(collection(db, 'whitelist'));
+                        whitelistEmails.value = snap.docs.map(doc => doc.id);
+                    } catch (e) {
+                        showToast('白名單載入失敗');
+                    } finally {
+                        isManagingWhitelist.value = false;
+                    }
+                };
+
+                const addWhitelist = async () => {
+                    const em = newWhitelistEmail.value.trim().toLowerCase();
+                    if (!em || !em.includes('@') || !db) return;
+                    isManagingWhitelist.value = true;
+                    try {
+                        await setDoc(doc(db, 'whitelist', em), { addedAt: serverTimestamp() });
+                        if (!whitelistEmails.value.includes(em)) whitelistEmails.value.push(em);
+                        newWhitelistEmail.value = '';
+                        showToast(`已成功授權 ${em}`);
+                    } catch (e) {
+                        showToast('授權失敗，請確認權限設定');
+                    } finally {
+                        isManagingWhitelist.value = false;
+                    }
+                };
+
+                const removeWhitelist = async (email) => {
+                    if (!confirm(`確定要移除 ${email} 的存取權限嗎？該用戶將立即被登出。`)) return;
+                    isManagingWhitelist.value = true;
+                    try {
+                        await deleteDoc(doc(db, 'whitelist', email));
+                        whitelistEmails.value = whitelistEmails.value.filter(e => e !== email);
+                        showToast(`已移除 ${email} 授權`);
+                    } catch (e) { showToast('移除失敗'); }
+                    finally { isManagingWhitelist.value = false; }
+                };
+
+                return {
+                    isCheckingAuth, currentUser, handleSignOut,
+                    historyList, isLoadingHistory, loadHistory, displayedHistory,
+                    currentTab, currentList, toggleArchive, deleteItem,
+                    restoreEventAndRedirect, copyInviteLink, formatDate,
+                    grandTotalSummary, markSettled, copyGrandTotalImage, isExporting,
+                    exportingRow, copyRowImage, activeReceipt,
+                    toastMsg, confirmModal, closeConfirm, flashGrandTotal,
+                    isAdminUser, showAdminModal, newWhitelistEmail, whitelistEmails, isManagingWhitelist, openAdminModal, addWhitelist, removeWhitelist
+                };
+            }
+        }).mount('#app');
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(e => { }));
+        }
+    </script>
+</body>
+
+</html>
