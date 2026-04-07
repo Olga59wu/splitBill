@@ -140,7 +140,25 @@
             </div>
         </div>
 
-        <div v-if="isCheckingAuth" class="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div v-if="previewImageBlobUrl"
+            class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-fade-in"
+            @click.self="previewImageBlobUrl = null">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-4 w-full max-w-sm relative flex flex-col items-center border border-slate-100 dark:border-slate-800">
+                <button @click="previewImageBlobUrl = null"
+                    class="absolute top-2 right-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors">
+                    ✕
+                </button>
+                <div class="mb-3 text-center w-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 p-3 rounded-2xl">
+                    <p class="font-bold">✅ 圖片產生成功</p>
+                    <p class="text-xs mt-1">您的系統不支援自動複製。<br/>請<strong>長按下方圖片</strong>選擇「拷貝」或「分享」即可貼到 LINE！</p>
+                </div>
+                <img :src="previewImageBlobUrl" class="w-full h-auto rounded-xl shadow-md border border-slate-200 dark:border-slate-700 select-none" style="-webkit-touch-callout: default;"/>
+                <button @click="previewImageBlobUrl = null" class="mt-4 px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl w-full">完成</button>
+            </div>
+        </div>
+
+        <div v-if="isCheckingAuth"
+            class="min-h-screen flex items-center justify-center flex-col bg-slate-50 dark:bg-slate-950">
             <svg class="animate-spin h-10 w-10 text-slate-900 dark:text-white" xmlns="http://www.w3.org/2000/svg"
                 fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -984,36 +1002,28 @@
                 watch(showChart, (val) => { if (val) setTimeout(updateChartDraw, 100); });
 
                 // Export Engine
+                const previewImageBlobUrl = ref(null);
+
                 const fallbackDownload = (blob, filename) => {
-                    const a = document.createElement('a');
-                    a.download = filename;
-                    a.href = URL.createObjectURL(blob);
-                    a.click();
-                    showToast('已轉換為圖片下載');
+                    previewImageBlobUrl.value = URL.createObjectURL(blob);
                 };
 
                 const shareOrDownloadBlob = async (blob, filename, successMsg) => {
                     const file = new File([blob], filename, { type: "image/png" });
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+                        showToast(successMsg);
+                        return;
+                    } catch (e) {
                         try {
-                            await navigator.share({
-                                files: [file],
-                                title: '結算憑證'
-                            });
-                            showToast(successMsg);
-                        } catch (err) {
-                            if (err.name !== 'AbortError') {
-                                fallbackDownload(blob, filename);
+                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                await navigator.share({ files: [file], title: '結算憑證' });
+                                showToast("已透過原生選單分享");
+                                return;
                             }
-                        }
-                    } else {
-                        try {
-                            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                            showToast(successMsg);
-                        } catch (e) {
-                            fallbackDownload(blob, filename);
-                        }
+                        } catch (err) {}
                     }
+                    fallbackDownload(blob, filename);
                 };
 
                 const exportImageReport = async () => {
@@ -1074,7 +1084,7 @@
                     addPerson, fastAddPerson, removePerson,
                     expenses, newExpense, addExpense, removeExpense, startEditExpense, cancelEditExpense, editingExpenseId,
                     eventLogs,
-                    eventRates, showRateModal, showChart,
+                    eventRates, showRateModal, showChart, previewImageBlobUrl,
                     totalAmountAsTwd, settlements, saveToFirebase, isSaving, exportImageReport,
                     toastMsg, confirmModal, closeConfirm, promptModal, closePrompt,
                     handleTitleChange, closeRateModal,
