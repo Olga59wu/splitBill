@@ -258,22 +258,26 @@
             <nav
                 class="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-50 transition-colors">
                 <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <button @click="goBack" class="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" title="返回上一頁">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
+                        </button>
                         <div
-                            class="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-xl shadow-inner border border-slate-200/50 dark:border-slate-700/50">
+                            class="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-xl shadow-inner border border-slate-200/50 dark:border-slate-700/50 hidden sm:flex">
                             💳</div>
                         <div>
-                            <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+                            <h1 class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
                                 帳務總覽</h1>
-                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">所有活動紀錄</p>
+                            <p class="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400">所有活動紀錄</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1 sm:gap-2">
+                        <button @click="handleSignOut" class="px-2 sm:px-3 py-2 text-xs sm:text-sm text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 font-bold transition-colors whitespace-nowrap">登出</button>
                         <button v-if="isAdminUser" @click="openAdminModal"
-                            class="p-2 text-xl hover:scale-110 transition-transform" title="白名單管理">🛡️</button>
+                            class="p-2 text-xl hover:scale-110 transition-transform hidden sm:block" title="白名單管理">🛡️</button>
                         <a href="./split_bill.html"
-                            class="px-4 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm rounded-xl shadow-sm hover:shadow-md hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 flex items-center gap-2">
-                            <span>➕</span><span class="hidden sm:inline">建立新活動</span>
+                            class="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm rounded-xl shadow-sm hover:shadow-md hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 flex items-center gap-1 sm:gap-2">
+                            <span>➕</span><span class="hidden sm:inline">新增</span>
                         </a>
                     </div>
                 </div>
@@ -348,38 +352,36 @@
                             <div v-else class="space-y-3 mt-4">
                                 <div v-for="(stl, stlIdx) in grandTotalSummary.settlements" :key="'gttl-'+stlIdx"
                                     :id="'stl-row-'+stlIdx"
-                                    class="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-slate-900 rounded-lg p-5 border border-slate-200 dark:border-slate-800 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-none gap-4">
-                                    <div class="flex items-center gap-3">
+                                    class="flex flex-col md:flex-row md:items-center justify-between bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm gap-4">
+                                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1">
                                         <div
                                             class="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-3">
-                                            <span class="text-xl font-black text-slate-900 dark:text-white">{{ stl.from
+                                            <span class="text-xl font-black text-slate-900 dark:text-white truncate max-w-[100px] sm:max-w-none">{{ stl.from
                                                 }}</span>
-                                            <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24"
+                                            <svg class="h-4 w-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24"
                                                 stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                                     d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                             </svg>
-                                            <span class="text-xl font-black text-emerald-600 dark:text-emerald-400">{{
+                                            <span class="text-xl font-black text-emerald-600 dark:text-emerald-400 truncate max-w-[100px] sm:max-w-none">{{
                                                 stl.to }}</span>
                                         </div>
-                                    </div>
-                                    <div class="flex items-center justify-between sm:justify-end gap-5">
-                                        <div class="font-black text-slate-900 dark:text-white tabular-nums tracking-tight text-2xl drop-shadow-sm transition-all"
+                                        <div class="font-black text-slate-900 dark:text-white tabular-nums tracking-tight text-3xl sm:text-2xl drop-shadow-sm transition-all sm:ml-auto"
                                             :class="{'animate-flash-green': flashGrandTotal}">NT$ {{ stl.amount }}</div>
-                                        <div class="flex items-center gap-2" data-html2canvas-ignore>
-                                            <button @click="copyRowImage(stlIdx, stl)"
+                                    </div>
+                                    <div class="flex items-center justify-end sm:justify-start gap-3 border-t sm:border-0 border-slate-50 dark:border-slate-800 pt-3 sm:pt-0 shrink-0" data-html2canvas-ignore>
+                                        <button @click="copyRowImage(stlIdx, stl)"
                                                 :disabled="exportingRow === stlIdx"
-                                                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg shadow-sm active:scale-95 transition-all outline-none"
+                                                class="px-3 py-2.5 sm:py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg shadow-sm active:scale-95 transition-all outline-none"
                                                 title="產生單筆請款圖">
                                                 <span v-if="exportingRow === stlIdx"
-                                                    class="animate-spin text-sm">⏳</span>
-                                                <span v-else class="text-sm">📸</span>
-                                            </button>
-                                            <button @click="markSettled(stl)"
-                                                class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-lg shadow-sm active:scale-95 transition-all outline-none">
+                                                    class="animate-spin text-sm block">⏳</span>
+                                                <span v-else class="text-sm block">📸</span>
+                                        </button>
+                                        <button @click="markSettled(stl)"
+                                                class="px-5 py-2.5 sm:px-4 sm:py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-lg shadow-sm active:scale-95 transition-all outline-none">
                                                 結清
-                                            </button>
-                                        </div>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -479,7 +481,13 @@
                 const flashGrandTotal = ref(false);
 
                 const grandTotalSummary = computed(() => {
-                    const evtBalances = {};
+                    const pairwise = {};
+                    const addDebt = (debtor, creditor, amt) => {
+                        if (debtor === creditor) return;
+                        if (!pairwise[debtor]) pairwise[debtor] = {};
+                        if (!pairwise[debtor][creditor]) pairwise[debtor][creditor] = 0;
+                        pairwise[debtor][creditor] += amt;
+                    };
 
                     historyList.value.forEach(doc => {
                         if (!doc.persons || !doc.expenses) return;
@@ -490,20 +498,17 @@
                             }
 
                             const payerName = doc.persons.find(p => p.id === exp.payerId)?.name || '未知';
-                            if (evtBalances[payerName] === undefined) evtBalances[payerName] = 0;
-                            evtBalances[payerName] += baseAmount;
-
+                            
                             let dynamicTotal = baseAmount;
                             let equalCount = 0;
                             const targets = exp.involvedPersonIds || [];
 
                             if (exp.fractionalAmounts) {
                                 targets.forEach(pid => {
-                                    const tName = doc.persons.find(p => p.id === pid)?.name || '未知';
                                     if (exp.fractionalAmounts[pid] !== undefined && exp.fractionalAmounts[pid] !== null) {
+                                        const tName = doc.persons.find(p => p.id === pid)?.name || '未知';
                                         const fixedCost = exp.fractionalAmounts[pid] * (exp.exchangeRate || 1);
-                                        if (evtBalances[tName] === undefined) evtBalances[tName] = 0;
-                                        evtBalances[tName] -= fixedCost;
+                                        addDebt(tName, payerName, fixedCost);
                                         dynamicTotal -= fixedCost;
                                     } else {
                                         equalCount++;
@@ -518,35 +523,38 @@
                                 targets.forEach(pid => {
                                     if (!exp.fractionalAmounts || exp.fractionalAmounts[pid] === undefined || exp.fractionalAmounts[pid] === null) {
                                         const tName = doc.persons.find(p => p.id === pid)?.name || '未知';
-                                        if (evtBalances[tName] === undefined) evtBalances[tName] = 0;
-                                        evtBalances[tName] -= splitAmount;
+                                        addDebt(tName, payerName, splitAmount);
                                     }
                                 });
                             }
                         });
                     });
 
-                    Object.keys(evtBalances).forEach(k => evtBalances[k] = Math.round(evtBalances[k]));
-
-                    let debtors = [], creditors = [];
-                    for (const [name, balance] of Object.entries(evtBalances)) {
-                        if (balance < 0) debtors.push({ name, amount: -balance });
-                        else if (balance > 0) creditors.push({ name, amount: balance });
-                    }
-                    debtors.sort((a, b) => b.amount - a.amount);
-                    creditors.sort((a, b) => b.amount - a.amount);
-
                     const settlements = [];
-                    let i = 0, j = 0;
-                    while (i < debtors.length && j < creditors.length) {
-                        const debtor = debtors[i], creditor = creditors[j];
-                        const transfer = Math.min(debtor.amount, creditor.amount);
-                        if (transfer > 0) settlements.push({ from: debtor.name, to: creditor.name, amount: Math.round(transfer) });
-                        debtor.amount -= transfer;
-                        creditor.amount -= transfer;
-                        if (debtor.amount <= 0) i++;
-                        if (creditor.amount <= 0) j++;
+                    const processedPairs = new Set();
+                    for (const debtor in pairwise) {
+                        for (const creditor in pairwise[debtor]) {
+                            const pairKey1 = `${debtor}-${creditor}`;
+                            const pairKey2 = `${creditor}-${debtor}`;
+                            if (processedPairs.has(pairKey1)) continue;
+
+                            let debtDC = pairwise[debtor][creditor] || 0;
+                            let debtCD = (pairwise[creditor] && pairwise[creditor][debtor]) || 0;
+
+                            let net = debtDC - debtCD;
+                            processedPairs.add(pairKey1);
+                            processedPairs.add(pairKey2);
+
+                            if (Math.abs(net) > 0.01) {
+                                if (net > 0) {
+                                    settlements.push({ from: debtor, to: creditor, amount: Math.round(net) });
+                                } else {
+                                    settlements.push({ from: creditor, to: debtor, amount: Math.round(-net) });
+                                }
+                            }
+                        }
                     }
+                    settlements.sort((a,b) => b.amount - a.amount);
                     return { settlements };
                 });
 
@@ -641,12 +649,10 @@
 
                         canvas.toBlob(async (blob) => {
                             if (!blob) throw new Error('圖檔產生失敗');
-                            const item = new ClipboardItem({ 'image/png': blob });
-                            await navigator.clipboard.write([item]);
-                            showToast('📸 圖片已複製！現在可以直接貼上至 LINE 中。');
+                            await shareOrDownloadBlob(blob, 'grand_total.png', '📸 圖片已產生！您可直接分享至 LINE 中。');
                         });
                     } catch (err) {
-                        showToast('截圖失敗！可能因為瀏覽器安全性權限阻擋。');
+                        showToast('產生失敗！請確認權限或嘗試使用電腦版匯出。');
                     } finally {
                         isExporting.value = false;
                     }
@@ -676,12 +682,10 @@
                         });
                         canvas.toBlob(async (blob) => {
                             if (!blob) throw new Error('圖檔產生失敗');
-                            const item = new ClipboardItem({ 'image/png': blob });
-                            await navigator.clipboard.write([item]);
-                            showToast('📸 高質感結帳單已產生並複製至剪貼簿！');
+                            await shareOrDownloadBlob(blob, 'receipt.png', '📸 高質感結帳單已產生！您可直接分享');
                         });
                     } catch (err) {
-                        showToast('截圖失敗！可能因為相關權限未核准。');
+                        showToast('產生失敗！請確認權限或嘗試使用電腦版匯出。');
                     } finally {
                         exportingRow.value = null;
                     }
@@ -726,6 +730,46 @@
                     });
                 });
 
+                const fallbackDownload = (blob, filename) => {
+                    const a = document.createElement('a');
+                    a.download = filename;
+                    a.href = URL.createObjectURL(blob);
+                    a.click();
+                    showToast('已轉為圖片下載，您可至相簿分享');
+                };
+
+                const shareOrDownloadBlob = async (blob, filename, successMsg) => {
+                    const file = new File([blob], filename, { type: "image/png" });
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: '結算憑證'
+                            });
+                            showToast(successMsg);
+                        } catch (err) {
+                            if (err.name !== 'AbortError') {
+                                fallbackDownload(blob, filename);
+                            }
+                        }
+                    } else {
+                        try {
+                            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                            showToast(successMsg);
+                        } catch (e) {
+                            fallbackDownload(blob, filename);
+                        }
+                    }
+                };
+
+                const goBack = () => {
+                    if (window.history.length > 2) {
+                        window.history.back();
+                    } else {
+                        window.location.href = './split_bill.html';
+                    }
+                };
+
                 const handleSignOut = async () => {
                     if (!auth) return;
                     try { await signOut(auth); } catch (error) { }
@@ -733,8 +777,13 @@
 
                 const calcSettlements = (personsArray, expensesArray) => {
                     if (!personsArray || personsArray.length === 0) return [];
-                    const balances = {};
-                    personsArray.forEach(p => balances[p.id] = 0);
+                    const pairwise = {};
+                    const addDebt = (debtor, creditor, amt) => {
+                        if (debtor === creditor) return;
+                        if (!pairwise[debtor]) pairwise[debtor] = {};
+                        if (!pairwise[debtor][creditor]) pairwise[debtor][creditor] = 0;
+                        pairwise[debtor][creditor] += amt;
+                    };
 
                     expensesArray.forEach(exp => {
                         let baseAmount = exp.amount;
@@ -742,17 +791,16 @@
                             baseAmount = exp.amount * exp.exchangeRate;
                         }
 
-                        balances[exp.payerId] += baseAmount;
-
+                        const payerId = exp.payerId;
                         let dynamicTotal = baseAmount;
                         let equalCount = 0;
-                        const targets = exp.involvedPersonIds;
+                        const targets = exp.involvedPersonIds || [];
 
                         if (exp.fractionalAmounts) {
                             targets.forEach(pid => {
                                 if (exp.fractionalAmounts[pid] !== undefined && exp.fractionalAmounts[pid] !== null) {
                                     const fixedCost = exp.fractionalAmounts[pid] * (exp.exchangeRate || 1);
-                                    balances[pid] -= fixedCost;
+                                    addDebt(pid, payerId, fixedCost);
                                     dynamicTotal -= fixedCost;
                                 } else {
                                     equalCount++;
@@ -766,34 +814,41 @@
                             const splitAmount = dynamicTotal / equalCount;
                             targets.forEach(pid => {
                                 if (!exp.fractionalAmounts || exp.fractionalAmounts[pid] === undefined || exp.fractionalAmounts[pid] === null) {
-                                    balances[pid] -= splitAmount;
+                                    addDebt(pid, payerId, splitAmount);
                                 }
                             });
                         }
                     });
 
-                    Object.keys(balances).forEach(id => balances[id] = Math.round(balances[id]));
-
-                    let debtors = [], creditors = [];
-                    for (const [id, balance] of Object.entries(balances)) {
-                        if (balance < 0) debtors.push({ id: Number(id), amount: -balance });
-                        else if (balance > 0) creditors.push({ id: Number(id), amount: balance });
-                    }
-                    debtors.sort((a, b) => b.amount - a.amount);
-                    creditors.sort((a, b) => b.amount - a.amount);
-
                     const results = [];
-                    let i = 0, j = 0;
                     const getName = (id) => { const p = personsArray.find(person => person.id === id); return p ? p.name : '未知'; };
-                    while (i < debtors.length && j < creditors.length) {
-                        const debtor = debtors[i], creditor = creditors[j];
-                        const transfer = Math.min(debtor.amount, creditor.amount);
-                        if (transfer > 0) results.push({ from: getName(debtor.id), to: getName(creditor.id), amount: Math.round(transfer) });
-                        debtor.amount -= transfer;
-                        creditor.amount -= transfer;
-                        if (debtor.amount <= 0) i++;
-                        if (creditor.amount <= 0) j++;
+                    const processedPairs = new Set();
+
+                    for (const debtorStr in pairwise) {
+                        for (const creditorStr in pairwise[debtorStr]) {
+                            const debtor = Number(debtorStr);
+                            const creditor = Number(creditorStr);
+                            const pairKey1 = `${debtor}-${creditor}`;
+                            const pairKey2 = `${creditor}-${debtor}`;
+                            if (processedPairs.has(pairKey1)) continue;
+
+                            let debtDC = pairwise[debtor][creditor] || 0;
+                            let debtCD = (pairwise[creditor] && pairwise[creditor][debtor]) || 0;
+
+                            let net = debtDC - debtCD;
+                            processedPairs.add(pairKey1);
+                            processedPairs.add(pairKey2);
+
+                            if (Math.abs(net) > 0.01) {
+                                if (net > 0) {
+                                    results.push({ from: getName(debtor), to: getName(creditor), amount: Math.round(net) });
+                                } else {
+                                    results.push({ from: getName(creditor), to: getName(debtor), amount: Math.round(-net) });
+                                }
+                            }
+                        }
                     }
+                    results.sort((a, b) => b.amount - a.amount);
                     return results;
                 };
 
@@ -818,7 +873,7 @@
                     isLoadingHistory.value = true;
                     try {
                         const eventsRef = collection(db, 'events');
-                        const q = query(eventsRef);
+                        const q = query(eventsRef, where('collaboratorUids', 'array-contains', currentUser.value.uid));
 
                         if (unsubHistory) unsubHistory();
                         unsubHistory = onSnapshot(q, (querySnapshot) => {
@@ -946,7 +1001,7 @@
                 };
 
                 return {
-                    isCheckingAuth, currentUser, handleSignOut,
+                    isCheckingAuth, currentUser, handleSignOut, goBack,
                     historyList, isLoadingHistory, loadHistory, displayedHistory,
                     currentTab, currentList, toggleArchive, deleteItem,
                     restoreEventAndRedirect, copyInviteLink, formatDate,

@@ -894,43 +894,68 @@
                     return Math.round(t);
                 });
 
-                // The Settlement Logic (Matches latest fractional requirement)
+                // The Settlement Logic (Exact Pairwise Match)
                 const settlements = computed(() => {
-                    let bals = {}; persons.value.forEach(p => bals[p.id] = 0);
+                    const pairwise = {};
+                    const addDebt = (debtor, creditor, amt) => {
+                        if (debtor === creditor) return;
+                        if (!pairwise[debtor]) pairwise[debtor] = {};
+                        if (!pairwise[debtor][creditor]) pairwise[debtor][creditor] = 0;
+                        pairwise[debtor][creditor] += amt;
+                    };
+
                     expenses.value.forEach(exp => {
                         let totalTwd = exp.amount * (exp.exchangeRate || 1);
-                        bals[exp.payerId] += totalTwd;
+                        const payerId = exp.payerId;
 
                         let dynTotal = totalTwd;
                         let eqCount = 0;
                         exp.involvedPersonIds.forEach(pid => {
                             let fixed = exp.fractionalAmounts ? exp.fractionalAmounts[pid] : undefined;
-                            if (fixed) {
+                            if (fixed !== undefined && fixed !== null) {
                                 let fixedTwd = fixed * (exp.exchangeRate || 1);
-                                bals[pid] -= fixedTwd; dynTotal -= fixedTwd;
+                                addDebt(pid, payerId, fixedTwd);
+                                dynTotal -= fixedTwd;
                             } else { eqCount++; }
                         });
 
                         if (eqCount > 0 && dynTotal > 0) {
                             let sp = dynTotal / eqCount;
-                            exp.involvedPersonIds.forEach(pid => { if (!exp.fractionalAmounts || !exp.fractionalAmounts[pid]) bals[pid] -= sp; });
+                            exp.involvedPersonIds.forEach(pid => { 
+                                if (!exp.fractionalAmounts || exp.fractionalAmounts[pid] === undefined || exp.fractionalAmounts[pid] === null) {
+                                    addDebt(pid, payerId, sp);
+                                }
+                            });
                         }
                     });
 
-                    Object.keys(bals).forEach(k => bals[k] = Math.round(bals[k]));
-                    let dr = [], cr = [];
-                    for (let [id, val] of Object.entries(bals)) {
-                        if (val < 0) dr.push({ id: Number(id), amt: -val }); else if (val > 0) cr.push({ id: Number(id), amt: val });
+                    let res = [];
+                    const processedPairs = new Set();
+                    for (const debtorStr in pairwise) {
+                        for (const creditorStr in pairwise[debtorStr]) {
+                            const debtor = Number(debtorStr);
+                            const creditor = Number(creditorStr);
+                            const pairKey1 = `${debtor}-${creditor}`;
+                            const pairKey2 = `${creditor}-${debtor}`;
+                            if (processedPairs.has(pairKey1)) continue;
+
+                            let debtDC = pairwise[debtor][creditor] || 0;
+                            let debtCD = (pairwise[creditor] && pairwise[creditor][debtor]) || 0;
+
+                            let net = debtDC - debtCD;
+                            processedPairs.add(pairKey1);
+                            processedPairs.add(pairKey2);
+
+                            if (Math.abs(net) > 0.01) {
+                                if (net > 0) {
+                                    res.push({ from: getPersonName(debtor), to: getPersonName(creditor), amount: Math.round(net) });
+                                } else {
+                                    res.push({ from: getPersonName(creditor), to: getPersonName(debtor), amount: Math.round(-net) });
+                                }
+                            }
+                        }
                     }
-                    dr.sort((a, b) => b.amt - a.amt); cr.sort((a, b) => b.amt - a.amt);
-                    let res = [], i = 0, j = 0;
-                    while (i < dr.length && j < cr.length) {
-                        let dt = dr[i], ct = cr[j];
-                        let flow = Math.min(dt.amt, ct.amt);
-                        if (flow > 0) res.push({ from: getPersonName(dt.id), to: getPersonName(ct.id), amount: flow });
-                        dt.amt -= flow; ct.amt -= flow;
-                        if (dt.amt <= 0) i++; if (ct.amt <= 0) j++;
-                    }
+                    res.sort((a, b) => b.amount - a.amount);
                     return res;
                 });
 
@@ -959,6 +984,38 @@
                 watch(showChart, (val) => { if (val) setTimeout(updateChartDraw, 100); });
 
                 // Export Engine
+                const fallbackDownload = (blob, filename) => {
+                    const a = document.createElement('a');
+                    a.download = filename;
+                    a.href = URL.createObjectURL(blob);
+                    a.click();
+                    showToast('已轉換為圖片下載');
+                };
+
+                const shareOrDownloadBlob = async (blob, filename, successMsg) => {
+                    const file = new File([blob], filename, { type: "image/png" });
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: '結算憑證'
+                            });
+                            showToast(successMsg);
+                        } catch (err) {
+                            if (err.name !== 'AbortError') {
+                                fallbackDownload(blob, filename);
+                            }
+                        }
+                    } else {
+                        try {
+                            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                            showToast(successMsg);
+                        } catch (e) {
+                            fallbackDownload(blob, filename);
+                        }
+                    }
+                };
+
                 const exportImageReport = async () => {
                     const el = document.getElementById('receiptCapture');
                     try {
@@ -968,13 +1025,7 @@
                         el.classList.add('-left-[9999px]'); el.classList.remove('left-[9999px]');
                         canvas.toBlob(async blob => {
                             if (!blob) return;
-                            try {
-                                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                                showToast('✅ 已複製收據圖片至剪貼簿！');
-                            } catch (e) {
-                                const a = document.createElement('a'); a.download = `收據-${eventTitle.value}.png`;
-                                a.href = URL.createObjectURL(blob); a.click(); showToast('已轉換為圖片下載');
-                            }
+                            await shareOrDownloadBlob(blob, `收據-${eventTitle.value}.png`, '✅ 已複製收據圖片至剪貼簿！');
                         }, 'image/png');
                     } catch (e) { el.classList.add('-left-[9999px]'); el.classList.remove('left-[9999px]'); }
                 };
