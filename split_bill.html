@@ -216,11 +216,27 @@
                             <span>💳</span> 分帳小幫手
                         </div>
                         <div class="flex gap-2">
-                            <div
+                            <button v-if="isViewMode && !isReadOnly" @click="isViewMode = false"
+                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-900 transition-colors shadow-sm flex items-center gap-1.5">
+                                <span>✏️</span><span class="hidden sm:inline">進入編輯</span>
+                            </button>
+
+                            <button v-else-if="!isViewMode && editEventId && !isReadOnly"
+                                @click="isViewMode = true; cancelEditExpense()"
+                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-colors shadow-md flex items-center gap-1.5">
+                                <span>✅</span><span class="hidden sm:inline">完成編輯</span>
+                            </button>
+
+                            <div v-else-if="!editEventId && !isReadOnly"
                                 class="px-3 md:px-4 py-2 rounded-lg text-sm font-semibold bg-slate-900 dark:bg-slate-700 text-white shadow-md">
-                                編輯活動</div>
+                                新增活動
+                            </div>
+                            <button v-if="editEventId" @click="copyInviteLink"
+                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-bold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900 transition-colors shadow-sm flex items-center gap-1.5">
+                                <span>🔗</span><span class="hidden sm:inline">分享</span>
+                            </button>
                             <a href="./history.html"
-                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 relative z-10 block">歷史總覽</a>
+                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 relative z-10 block transition-colors">歷史總覽</a>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -247,7 +263,7 @@
 
                 <header class="text-center mb-8">
                     <h1 class="flex justify-center items-center">
-                        <input v-if="!isReadOnly" v-model.trim="eventTitle" @change="handleTitleChange"
+                        <input v-if="!isReadOnly && !isViewMode" v-model.trim="eventTitle" @change="handleTitleChange"
                             placeholder="活動主題 (例: 沖繩旅遊)"
                             class="bg-transparent border-b-2 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500 focus:border-slate-900 dark:focus:border-white focus:outline-none text-center px-4 py-2 w-full max-w-sm md:max-w-lg text-3xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-colors"
                             maxlength="30">
@@ -263,9 +279,9 @@
                 </div>
 
                 <div
-                    :class="['grid grid-cols-1 gap-6 md:gap-8', isReadOnly ? 'xl:grid-cols-1 max-w-4xl mx-auto' : 'xl:grid-cols-2']">
+                    :class="['grid grid-cols-1 gap-6 md:gap-8 transition-all duration-300', (isReadOnly || isViewMode) ? 'xl:grid-cols-1 max-w-4xl mx-auto' : 'xl:grid-cols-2']">
                     <!-- 左列 -->
-                    <div v-if="!isReadOnly" class="space-y-6 md:space-y-8">
+                    <div v-if="!isReadOnly && !isViewMode" class="space-y-6 md:space-y-8 animate-fade-in">
                         <!-- 人員區塊 -->
                         <section
                             class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 md:p-8">
@@ -581,7 +597,7 @@
                                                 </template>
                                             </div>
                                         </div>
-                                        <div v-if="!isReadOnly" class="flex gap-1.5 ml-3 shrink-0">
+                                        <div v-if="!isReadOnly && !isViewMode" class="flex gap-1.5 ml-3 shrink-0">
                                             <button @click="startEditExpense(expense)"
                                                 class="text-slate-400 hover:text-amber-500 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 w-8 h-8 rounded flex items-center justify-center transition-all md:opacity-0 group-hover:opacity-100">✏️</button>
                                             <button @click="removeExpense(expense.id)"
@@ -654,32 +670,36 @@
                                         {{ totalAmountAsTwd }}</span>
                                 </div>
 
-                                <div v-if="editEventId && !isReadOnly"
-                                    class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold py-4 rounded-xl flex justify-center items-center gap-2">
-                                    <span v-if="isSaving" class="flex items-center gap-2"><svg
-                                            class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                            viewBox="0 0 24 24">
+                                <div class="mt-6">
+                                    <button v-if="!editEventId && expenses.length > 0 && !isReadOnly"
+                                        @click="saveToFirebase" :disabled="isSaving"
+                                        class="w-full bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 text-white font-bold tracking-wide py-4 rounded-xl transition-all shadow-lg active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-50">
+                                        <svg v-if="isSaving" class="animate-spin h-5 w-5"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                                 stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor"
                                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                                             </path>
-                                        </svg> 變更即時同步中...</span>
-                                    <span v-else>⚡ 變更已自動連動至雲端</span>
+                                        </svg>
+                                        <span v-else>💾 建立專案並上傳雲端</span>
+                                    </button>
+
+                                    <div v-else-if="editEventId && !isViewMode && !isReadOnly"
+                                        class="w-full bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 font-bold py-4 rounded-xl flex justify-center items-center gap-2 border border-dashed border-slate-200 dark:border-slate-700">
+                                        <span v-if="isSaving" class="flex items-center gap-2">
+                                            <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                                fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                    stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                                </path>
+                                            </svg> 變更即時同步中...
+                                        </span>
+                                        <span v-else>⚡ 編輯內容已即時儲存至雲端</span>
+                                    </div>
                                 </div>
-                                <button v-else-if="expenses.length > 0 && !isReadOnly" @click="saveToFirebase"
-                                    :disabled="isSaving"
-                                    class="w-full bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 text-white font-bold tracking-wide py-4 rounded-xl transition-all shadow-lg active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-50">
-                                    <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg"
-                                        fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                            stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor"
-                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                        </path>
-                                    </svg>
-                                    <span v-else>💾 建立專案並上傳雲端</span>
-                                </button>
                             </div>
                         </section>
 
@@ -885,7 +905,8 @@
                 const showRateModal = ref(false);
                 const isFetchingRates = ref(false);
                 const ratesLastUpdatedAt = ref('');
-
+                // 檢視模式狀態 (預設為 false，只有從歷史紀錄進來才會變 true)
+                const isViewMode = ref(false);
                 // 用來儲存進入編輯時的歷史匯率
                 const editingSnapshotRate = ref(null);
                 // 記錄使用者是否手動點擊了「更新匯率」
@@ -933,21 +954,6 @@
                         isFetchingRates.value = false;
                     }
                 };
-
-                onMounted(() => {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const eId = urlParams.get('id');
-                    if (eId) {
-                        editEventId.value = eId;
-                        subscribeToEvent(eId);
-                    } else {
-                        // Init new
-                        persons.value = [{ id: 1, name: myPreferredName.value }];
-                        newExpense.value.involvedPersonIds = [1];
-                        // smart auto-fetch once on new
-                        fetchLatestRates(false);
-                    }
-                });
 
                 const eventLogs = ref([]);
                 const addSystemLog = (msg) => {
@@ -1213,6 +1219,7 @@
                             persons.value = [];
                             expenses.value = [];
                             subscribeToEvent(viewId);
+                            isViewMode.value = true;
                         } else if (d && d.id) {
                             editEventId.value = d.id;
                             eventTitle.value = d.title || '';
@@ -1222,6 +1229,7 @@
                             if (d.collaboratorUids) collaboratorUids.value = d.collaboratorUids;
 
                             subscribeToEvent(d.id);
+                            isViewMode.value = true;
                         } else {
                             let sn = localStorage.getItem('mySplitBillName');
                             if (!sn) { sn = user.displayName || '我'; localStorage.setItem('mySplitBillName', sn); }
@@ -1229,6 +1237,7 @@
                             persons.value = [{ id: 1, name: sn }];
                             personIdCounter = 2;
                             newExpense.value.involvedPersonIds = [1];
+                            fetchLatestRates(false); // 讓開新活動時自動抓最新匯率
                         }
 
                         nextTick(() => initChart());
@@ -1334,12 +1343,14 @@
                     if (editingExpenseId.value) {
                         const idx = expenses.value.findIndex(x => x.id === editingExpenseId.value);
                         if (idx > -1) expenses.value[idx] = { ...clone, id: editingExpenseId.value };
-                        addSystemLog(`${myPreferredName.value} 更新了明細: ${clone.description}`);
-                        showToast('已更新明細金流');
+                        addSystemLog(`${myPreferredName.value} 更新了明細: ${clone.description}`); // 這行會觸發同步
+                        showToast('已更新明細');
                     } else {
                         clone.id = expenseIdCounter++;
                         expenses.value.unshift(clone);
-                        addSystemLog(`${myPreferredName.value} 登錄了花費: ${clone.description} (${clone.currency} ${clone.amount})`);
+                        if (editEventId.value) {
+                            addSystemLog(`${myPreferredName.value} 登錄了新花費: ${clone.description}`);
+                        }
                     }
                     cancelEditExpense();
                 };
@@ -1373,11 +1384,26 @@
                     newExpense.value = getEmptyExpenseObject();
                     newExpense.value.involvedPersonIds = persons.value.map(p => p.id);
                 };
-                const removeExpense = (id) => {
+                // 將原本的 removeExpense 改成 async 函數
+                const removeExpense = async (id) => {
                     const e = expenses.value.find(ex => ex.id === id);
+                    if (!e) return; // 確保有找到該筆明細
+
+                    // 呼叫你寫好的確認彈窗，並等待使用者選擇
+                    const isConfirmed = await showConfirm(
+                        '🗑️ 刪除明細確認',
+                        `確定要刪除「${e.description} (${e.currency} ${e.amount})」這筆花費嗎？\n刪除後結算金額將會重新計算。`
+                    );
+
+                    // 如果使用者按「取消」，就提早結束函數，什麼都不做
+                    if (!isConfirmed) return;
+
+                    // 如果按「確定」，才執行原本的刪除邏輯
                     expenses.value = expenses.value.filter(x => x.id !== id);
                     if (editingExpenseId.value === id) cancelEditExpense();
-                    if (e) addSystemLog(`${myPreferredName.value} 刪除了明細: ${e.description}`);
+
+                    addSystemLog(`${myPreferredName.value} 刪除了明細: ${e.description}`);
+                    showToast('已刪除該筆明細');
                 };
 
                 const getPersonName = (id) => { const p = persons.value.find(p => p.id === id); return p ? p.name : '...'; };
@@ -1575,25 +1601,35 @@
                             payload.ownerUid = currentUser.value.uid;
                             payload.collaboratorUids = [currentUser.value.uid];
                             payload.isArchived = false;
-                            await addDoc(collection(db, 'events'), payload);
 
-                            // Initialize everything for the next new event
-                            eventTitle.value = '';
-                            persons.value = [{ id: 1, name: myPreferredName.value }];
-                            personIdCounter = 2;
-                            expenses.value = [];
-                            expenseIdCounter = 1;
-                            newExpense.value = getEmptyExpenseObject();
-                            newExpense.value.involvedPersonIds = [1];
-                            editingExpenseId.value = null;
-                            showChart.value = false;
-                            eventLogs.value = [];
+                            // 1. 取得建立後的雲端文件 ID
+                            const docRef = await addDoc(collection(db, 'events'), payload);
 
-                            showToast('💾 建立送出！表單已重置清空，可接續新增。');
+                            // 2. 🌟 關鍵優化：直接將狀態切換為「已建立 (編輯模式)」，不要清空畫面
+                            editEventId.value = docRef.id;
+
+                            // 3. 悄悄更新瀏覽器的網址列 (加上 ?id=...)，這樣使用者按重新整理才不會跳回空白頁
+                            window.history.replaceState(null, '', `?id=${docRef.id}`);
+
+                            // 4. 啟動即時監聽，讓這個專案正式連上雲端
+                            subscribeToEvent(docRef.id);
+
+                            showToast('🎉 專案建立成功！接下來的所有變更都會自動即時同步。');
                         }
                     } catch (e) { showToast('寫入失敗'); } finally { isSaving.value = false; }
                 };
+                // 複製邀請連結邏輯
+                const copyInviteLink = () => {
+                    if (!editEventId.value) return;
+                    // 產生指向 index.html 的邀請連結
+                    const link = window.location.origin + window.location.pathname.replace('split_bill.html', 'index.html') + '?invite=' + editEventId.value;
 
+                    navigator.clipboard.writeText(link).then(() => {
+                        showToast('✅ 邀請連結已複製到剪貼簿！');
+                    }).catch(err => {
+                        showToast('複製失敗: ' + link);
+                    });
+                };
                 return {
                     isCheckingAuth, currentUser, handleSignOut, myPreferredName, changeMyName,
                     isReadOnly, ownerUid,
@@ -1608,7 +1644,8 @@
                     handleTitleChange, closeRateModal,
                     isVisitor, selectedIdentity, isClaiming, claimIdentity, showCalculator, calcInput, openCalculator,
                     closeCalculator, appendCalc, calcEvaluate, currentCalculatedTotal, editingSnapshotRate, isRateManuallyUpdated, activeExchangeRate,
-                    selectAllInvolved, deselectAllInvolved, remainingExactAmount, exactModeError, isDirectTransfer, handleAmountInput, handleAmountBlur
+                    selectAllInvolved, deselectAllInvolved, remainingExactAmount, exactModeError, isDirectTransfer,
+                    handleAmountInput, handleAmountBlur, isViewMode, editEventId, copyInviteLink
                 };
             }
         }).mount('#app');
