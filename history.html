@@ -380,23 +380,24 @@
                     <div v-else-if="currentTab === 'grand_total'" class="space-y-4">
                         <div id="grandTotalCard"
                             class="bg-amber-50/50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700/50 rounded-xl p-6 shadow-sm relative overflow-hidden">
-                            <div class="mb-6 border-b border-amber-200/50 dark:border-amber-800/50 pb-4 pr-14">
+                            <div class="mb-5 border-b border-amber-200/50 dark:border-amber-800/50 pb-4 pr-16">
                                 <h3
-                                    class="font-extrabold text-xl text-amber-900 dark:text-amber-400 flex items-center gap-2">
+                                    class="font-extrabold text-lg sm:text-xl text-amber-900 dark:text-amber-400 flex flex-wrap items-center gap-2">
                                     跨域歷史累積總算匯總
                                     <span
-                                        class="text-[10px] bg-amber-200 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider">實時演算</span>
+                                        class="shrink-0 whitespace-nowrap text-[10px] bg-amber-200 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider">實時演算</span>
                                 </h3>
                                 <div
-                                    class="text-sm text-amber-700 dark:text-amber-500/80 font-semibold mt-2 data-html2canvas-ignore">
-                                    將歷年來所有活動記錄混合計算（包含已封存），得出最終還應執行的淨額收復轉帳。</div>
+                                    class="text-xs sm:text-sm text-amber-700 dark:text-amber-500/80 font-semibold mt-2 leading-relaxed data-html2canvas-ignore">
+                                    將歷年來所有活動記錄混合計算（包含已封存），得出最終還應執行的淨額收復轉帳。
+                                </div>
                             </div>
 
                             <button @click="copyGrandTotalImage" :disabled="isExporting"
-                                class="absolute top-6 right-6 flex items-center justify-center w-10 h-10 bg-amber-200/50 hover:bg-amber-200 dark:bg-amber-800/50 dark:hover:bg-amber-700 text-amber-700 dark:text-amber-400 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50 data-html2canvas-ignore"
+                                class="absolute top-4 right-4 sm:top-5 sm:right-5 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 bg-amber-200/50 hover:bg-amber-200 dark:bg-amber-800/50 dark:hover:bg-amber-700 text-amber-700 dark:text-amber-400 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50 data-html2canvas-ignore"
                                 title="複製為圖片">
                                 <span v-if="isExporting" class="animate-spin text-sm">⏳</span>
-                                <span v-else class="text-xl">📸</span>
+                                <span v-else class="text-lg sm:text-xl">📸</span>
                             </button>
 
                             <div v-if="grandTotalSummary.settlements.length === 0"
@@ -406,37 +407,38 @@
                             <div v-else class="space-y-3 mt-4">
                                 <div v-for="(stl, stlIdx) in grandTotalSummary.settlements" :key="'gttl-'+stlIdx"
                                     :id="'stl-row-'+stlIdx"
-                                    class="flex flex-col md:flex-row md:items-center justify-between bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm gap-4">
-                                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1">
+                                    class="flex flex-col sm:flex-row justify-between bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm gap-3">
+
+                                    <div class="flex items-center justify-between w-full sm:w-auto sm:flex-1">
                                         <div
-                                            class="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-3">
+                                            class="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-2">
                                             <span
-                                                class="text-xl font-black text-slate-900 dark:text-white truncate max-w-[100px] sm:max-w-none">{{
-                                                stl.from
-                                                }}</span>
+                                                class="text-lg font-black text-slate-900 dark:text-white truncate max-w-[80px] sm:max-w-none">{{
+                                                stl.from }}</span>
                                             <svg class="h-4 w-4 shrink-0 text-emerald-500" fill="none"
                                                 viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                                     d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                             </svg>
                                             <span
-                                                class="text-xl font-black text-emerald-600 dark:text-emerald-400 truncate max-w-[100px] sm:max-w-none">{{
+                                                class="text-lg font-black text-emerald-600 dark:text-emerald-400 truncate max-w-[80px] sm:max-w-none">{{
                                                 stl.to }}</span>
                                         </div>
-                                        <div class="font-black text-slate-900 dark:text-white tabular-nums tracking-tight text-3xl sm:text-2xl drop-shadow-sm transition-all sm:ml-auto"
+                                        <div class="font-black text-slate-900 dark:text-white tabular-nums tracking-tight text-xl sm:text-2xl drop-shadow-sm transition-all sm:ml-4"
                                             :class="{'animate-flash-green': flashGrandTotal}">NT$ {{ stl.amount }}</div>
                                     </div>
-                                    <div class="flex items-center justify-end sm:justify-start gap-3 border-t sm:border-0 border-slate-50 dark:border-slate-800 pt-3 sm:pt-0 shrink-0"
+
+                                    <div class="flex items-center justify-end gap-2 sm:gap-3 border-t sm:border-0 border-slate-100 dark:border-slate-800 pt-3 sm:pt-0 shrink-0"
                                         data-html2canvas-ignore>
                                         <button @click="copyRowImage(stlIdx, stl)" :disabled="exportingRow === stlIdx"
-                                            class="px-3 py-2.5 sm:py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg shadow-sm active:scale-95 transition-all outline-none"
+                                            class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg shadow-sm active:scale-95 transition-all outline-none"
                                             title="產生單筆請款圖">
                                             <span v-if="exportingRow === stlIdx"
                                                 class="animate-spin text-sm block">⏳</span>
                                             <span v-else class="text-sm block">📸</span>
                                         </button>
                                         <button @click="markSettled(stl)"
-                                            class="px-5 py-2.5 sm:px-4 sm:py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-lg shadow-sm active:scale-95 transition-all outline-none">
+                                            class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-lg shadow-sm active:scale-95 transition-all outline-none">
                                             結清
                                         </button>
                                     </div>
