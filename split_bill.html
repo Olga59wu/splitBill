@@ -118,7 +118,8 @@
 
         <!-- UI: Currency Rates Config Modal -->
         <div v-if="showRateModal"
-            class="fixed inset-0 z-[105] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            class="fixed inset-0 z-[105] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+            @click.self="closeRateModal">
             <div
                 class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 w-full max-w-sm border border-slate-100 dark:border-slate-800">
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">外幣匯率設定</h3>
@@ -144,7 +145,7 @@
                         class="px-5 py-2.5 text-sm font-bold text-white bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 rounded-xl transition-all">套用儲存</button>
                 </div>
                 <p v-if="ratesLastUpdatedAt" class="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-4">
-                    ⚠️ 匯率約每日更新一次<br/>最後更新: {{ ratesLastUpdatedAt }}
+                    ⚠️ 匯率約每日更新一次<br />最後更新: {{ ratesLastUpdatedAt }}
                 </p>
             </div>
         </div>
@@ -152,17 +153,22 @@
         <div v-if="previewImageBlobUrl"
             class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-fade-in"
             @click.self="previewImageBlobUrl = null">
-            <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-4 w-full max-w-sm relative flex flex-col items-center border border-slate-100 dark:border-slate-800">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-4 w-full max-w-sm relative flex flex-col items-center border border-slate-100 dark:border-slate-800">
                 <button @click="previewImageBlobUrl = null"
                     class="absolute top-2 right-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors">
                     ✕
                 </button>
-                <div class="mb-3 text-center w-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 p-3 rounded-2xl">
+                <div
+                    class="mb-3 text-center w-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 p-3 rounded-2xl">
                     <p class="font-bold">✅ 圖片產生成功</p>
-                    <p class="text-xs mt-1">您的系統不支援自動複製。<br/>請<strong>長按下方圖片</strong>選擇「拷貝」或「分享」即可貼到 LINE！</p>
+                    <p class="text-xs mt-1">您的系統不支援自動複製。<br />請<strong>長按下方圖片</strong>選擇「拷貝」或「分享」即可貼到 LINE！</p>
                 </div>
-                <img :src="previewImageBlobUrl" class="w-full h-auto rounded-xl shadow-md border border-slate-200 dark:border-slate-700 select-none" style="-webkit-touch-callout: default;"/>
-                <button @click="previewImageBlobUrl = null" class="mt-4 px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl w-full">完成</button>
+                <img :src="previewImageBlobUrl"
+                    class="w-full h-auto rounded-xl shadow-md border border-slate-200 dark:border-slate-700 select-none"
+                    style="-webkit-touch-callout: default;" />
+                <button @click="previewImageBlobUrl = null"
+                    class="mt-4 px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl w-full">完成</button>
             </div>
         </div>
 
@@ -314,12 +320,24 @@
                             <form @submit.prevent="addExpense" class="space-y-5">
                                 <div>
                                     <label
-                                        class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">墊付人</label>
+                                        class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 ml-1">誰先墊付</label>
+
+                                    <div class="flex flex-wrap gap-2 md:hidden">
+                                        <button type="button" v-for="person in persons" :key="'payer-m-'+person.id"
+                                            @click="newExpense.payerId = person.id"
+                                            :class="['px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex-1 min-w-[80px] cursor-pointer', 
+                 newExpense.payerId === person.id ? 'bg-slate-900 text-white dark:bg-emerald-600 shadow-md' : 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-100']">
+                                            {{ person.name }}
+                                        </button>
+                                    </div>
+
                                     <select v-model="newExpense.payerId" required
-                                        class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-transparent dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 font-medium text-slate-800 dark:text-white">
+                                        class="hidden md:block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-transparent dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 font-medium text-slate-800 dark:text-white cursor-pointer hover:border-slate-300 transition-colors">
                                         <option value="" disabled>請選擇誰先付款</option>
-                                        <option v-for="person in persons" :key="person.id" :value="person.id">{{
-                                            person.name }}</option>
+                                        <option v-for="person in persons" :key="'payer-d-'+person.id"
+                                            :value="person.id">
+                                            {{ person.name }}
+                                        </option>
                                     </select>
                                 </div>
 
@@ -340,48 +358,161 @@
                                                 :value="currKey">{{currKey}}</option>
                                         </select>
                                     </div>
-                                    <div class="w-full sm:w-32">
+                                    <div class="w-full sm:flex-1">
                                         <label
-                                            class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">外幣金額</label>
-                                        <input v-model.number="newExpense.amount" type="number" step="0.01" min="1"
-                                            placeholder="金額" required
-                                            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-transparent dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 font-bold tabular-nums text-slate-800 dark:text-white">
+                                            class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">金額與附加費</label>
+                                        <div class="relative flex items-center mb-2">
+                                            <input v-model="newExpense.amount" type="text" inputmode="decimal"
+                                                placeholder="輸入金額" required @input="handleAmountInput"
+                                                @blur="handleAmountBlur"
+                                                class="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-950 border border-transparent dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 font-bold tabular-nums text-slate-800 dark:text-white">
+                                            <button type="button" @click="openCalculator"
+                                                class="absolute right-2 p-2 text-slate-400 hover:text-emerald-500 transition-colors"
+                                                title="開啟計算機">
+                                                🔢
+                                            </button>
+                                        </div>
+
+                                        <div class="flex flex-wrap gap-2 text-xs">
+                                            <button type="button" @click="newExpense.feePercentage = 0"
+                                                :class="['px-3 py-1.5 rounded-md font-bold transition-colors', newExpense.feePercentage === 0 ? 'bg-slate-800 text-white dark:bg-emerald-600' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200']">無附加費</button>
+                                            <button type="button" @click="newExpense.feePercentage = 10"
+                                                :class="['px-3 py-1.5 rounded-md font-bold transition-colors', newExpense.feePercentage === 10 ? 'bg-slate-800 text-white dark:bg-emerald-600' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200']">+10%</button>
+                                            <div
+                                                class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-md px-2 focus-within:ring-2 focus-within:ring-slate-900 dark:focus-within:ring-emerald-500">
+                                                <span class="text-slate-400 font-bold">+</span>
+                                                <input type="number" v-model.number="newExpense.feePercentage"
+                                                    class="w-10 bg-transparent text-center font-bold text-slate-700 dark:text-slate-300 outline-none py-1.5"
+                                                    placeholder="自訂">
+                                                <span class="text-slate-400 font-bold">%</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div v-if="newExpense.currency !== 'TWD' && newExpense.amount"
                                     class="text-right text-xs font-bold text-emerald-600 dark:text-emerald-400 px-1 -mt-2">
-                                    ≒ TWD $ {{ Math.round(newExpense.amount * eventRates[newExpense.currency]) }}
+                                    ≒ TWD $ {{ Math.round(currentCalculatedTotal * activeExchangeRate) }}
+                                </div>
+
+                                <div v-if="editingExpenseId && newExpense.currency !== 'TWD'">
+                                    <div v-if="!isRateManuallyUpdated && editingSnapshotRate !== eventRates[newExpense.currency]"
+                                        class="mt-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3 sm:p-4 text-sm animate-fade-in">
+                                        <div class="flex items-start gap-2 sm:gap-3">
+                                            <span class="text-amber-500 text-lg mt-0.5">⚠️</span>
+                                            <div class="flex-1">
+                                                <p class="font-bold text-amber-800 dark:text-amber-400 mb-1">偵測到匯率變動</p>
+                                                <p
+                                                    class="text-amber-700 dark:text-amber-500 text-xs mb-3 font-medium leading-relaxed">
+                                                    此帳目建立時的匯率與現在不同。系統已預設「沿用歷史匯率」以防舊帳目結算變動。
+                                                </p>
+                                                <div class="flex flex-wrap gap-2 text-xs font-bold items-center">
+                                                    <span
+                                                        class="bg-white dark:bg-slate-800 px-2 py-1.5 rounded border border-amber-200 dark:border-amber-700 text-slate-500">
+                                                        歷史: {{ editingSnapshotRate }}
+                                                    </span>
+                                                    <span
+                                                        class="bg-white dark:bg-slate-800 px-2 py-1.5 rounded border border-amber-200 dark:border-amber-700 text-emerald-600 dark:text-emerald-400">
+                                                        最新: {{ eventRates[newExpense.currency] }}
+                                                    </span>
+                                                    <button type="button" @click="isRateManuallyUpdated = true"
+                                                        class="ml-auto mt-2 sm:mt-0 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-md transition-colors shadow-sm active:scale-95">
+                                                        🔄 更新為最新
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-else
+                                        class="mt-3 text-xs font-bold text-slate-400 flex items-center justify-end gap-1 px-1">
+                                        <span v-if="isRateManuallyUpdated" class="text-emerald-500">✅ 已套用最新匯率</span>
+                                        <span v-else>🔒 沿用歷史匯率</span>
+                                        : {{ activeExchangeRate }}
+                                    </div>
                                 </div>
 
                                 <!-- Custom Fractional Splits Section -->
-                                <div class="bg-slate-50 p-4.5 rounded-xl border border-slate-100">
-                                    <div class="mb-4">
-                                        <label
-                                            class="block text-xs font-bold text-slate-500 tracking-widest">進階分攤設定</label>
-                                        <p class="text-[11px] text-slate-400 mt-1.5 font-medium leading-relaxed">
-                                            預設為所有打勾者「平分」總額。<br>您也可在此直接指定某人該付多少，剩下沒標金額的人系統會自動平分剩餘零頭。</p>
+                                <div
+                                    class="bg-slate-50 dark:bg-slate-800/30 p-4 sm:p-5 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                                    <div
+                                        class="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+                                        <label class="text-sm font-bold text-slate-700 dark:text-slate-300">分攤方式</label>
+                                        <div
+                                            class="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-800/50">
+                                            結算總額: {{ newExpense.currency }} {{ currentCalculatedTotal }}
+                                        </div>
+                                    </div>
+
+                                    <div class="flex gap-2 mb-4 bg-slate-200/50 dark:bg-slate-900/50 p-1 rounded-lg">
+                                        <button type="button" @click="newExpense.splitMode = 'equal'"
+                                            :class="['flex-1 py-1.5 text-xs font-bold rounded-md transition-all', newExpense.splitMode === 'equal' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400']">🟰
+                                            均攤</button>
+                                        <button type="button" @click="newExpense.splitMode = 'shares'"
+                                            :class="['flex-1 py-1.5 text-xs font-bold rounded-md transition-all', newExpense.splitMode === 'shares' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400']">👥
+                                            按份數</button>
+                                        <button type="button" @click="newExpense.splitMode = 'exact'"
+                                            :class="['flex-1 py-1.5 text-xs font-bold rounded-md transition-all', newExpense.splitMode === 'exact' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400']">🎯
+                                            指定金額</button>
+                                    </div>
+                                    <div class="flex justify-end gap-3 mb-3 px-1">
+                                        <button type="button" @click="selectAllInvolved"
+                                            class="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 hover:underline">全選</button>
+                                        <button type="button" @click="deselectAllInvolved"
+                                            class="text-[11px] font-extrabold text-slate-400 hover:underline">全不選</button>
                                     </div>
                                     <div class="space-y-3">
                                         <div v-for="person in persons" :key="'inv' + person.id"
-                                            class="flex items-center gap-3">
-                                            <label class="flex items-center cursor-pointer min-w-[80px]">
+                                            class="flex items-center gap-3 bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm min-h-[52px] sm:min-h-[60px]">
+                                            <label class="flex items-center cursor-pointer min-w-[80px] flex-1">
                                                 <input type="checkbox" :value="person.id"
                                                     v-model="newExpense.involvedPersonIds"
-                                                    class="w-4 h-4 text-emerald-600 bg-white rounded focus:ring-emerald-500">
-                                                <span class="ml-2 text-sm font-semibold text-slate-700">{{ person.name
-                                                    }}</span>
+                                                    class="w-4 h-4 text-emerald-600 bg-slate-100 border-slate-300 rounded focus:ring-emerald-500">
+                                                <span
+                                                    class="ml-2 text-sm font-semibold text-slate-700 dark:text-slate-300">{{
+                                                    person.name }}</span>
                                             </label>
-                                            <input v-if="newExpense.involvedPersonIds.includes(person.id)"
+
+                                            <div v-if="newExpense.splitMode === 'shares' && newExpense.involvedPersonIds.includes(person.id)"
+                                                class="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 p-1">
+                                                <button type="button"
+                                                    @click="newExpense.shares[person.id] = Math.max(1, (newExpense.shares[person.id] || 1) - 1)"
+                                                    class="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 text-slate-600 dark:text-white rounded shadow-sm font-bold hover:bg-slate-100">-</button>
+                                                <span class="text-xs font-bold w-4 text-center dark:text-white">{{
+                                                    newExpense.shares[person.id] || 1 }}</span>
+                                                <button type="button"
+                                                    @click="newExpense.shares[person.id] = (newExpense.shares[person.id] || 1) + 1"
+                                                    class="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 text-slate-600 dark:text-white rounded shadow-sm font-bold hover:bg-slate-100">+</button>
+                                                <span class="text-[10px] text-slate-400 ml-1">份</span>
+                                            </div>
+
+                                            <input
+                                                v-if="newExpense.splitMode === 'exact' && newExpense.involvedPersonIds.includes(person.id)"
                                                 v-model.number="newExpense.fractionalAmounts[person.id]" type="number"
-                                                class="flex-1 px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-md placeholder-slate-300 focus:outline-none focus:border-emerald-400 font-bold text-emerald-600"
-                                                placeholder="不填代表均分">
+                                                min="0"
+                                                @input="newExpense.fractionalAmounts[person.id] = Math.abs($event.target.value) || ''"
+                                                class="..." placeholder="指定金額">
                                         </div>
                                     </div>
                                     <p v-if="newExpense.involvedPersonIds.length === 0"
-                                        class="text-rose-500 text-xs font-bold mt-3">請至少勾選一名分攤者</p>
+                                        class="text-rose-500 text-xs font-bold mt-3">⚠️ 請至少勾選一名分攤者</p>
+                                    <div v-if="newExpense.splitMode === 'exact' && newExpense.involvedPersonIds.length > 0"
+                                        class="mt-4 p-3 bg-slate-100/50 dark:bg-slate-900/50 rounded-lg flex justify-between items-center text-sm font-bold border border-slate-200 dark:border-slate-700/50">
+                                        <span class="text-slate-500 dark:text-slate-400">剩餘未分配：</span>
+                                        <span
+                                            :class="remainingExactAmount < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'">
+                                            {{ newExpense.currency }} {{ remainingExactAmount }}
+                                        </span>
+                                    </div>
+                                    <p v-if="exactModeError === 'over'" class="text-rose-500 text-xs font-bold mt-2">
+                                        ⚠️ 指定金額總和不能超過總花費
+                                    </p>
+                                    <p v-if="exactModeError === 'unallocated'"
+                                        class="text-amber-500 text-xs font-bold mt-2">
+                                        ⚠️ 還有 {{ remainingExactAmount }} 未分配，請分配完畢或清空某人的金額由其吸收餘額
+                                    </p>
                                 </div>
 
-                                <button type="submit" :disabled="persons.length === 0"
+                                <button type="submit" :disabled="persons.length === 0 || exactModeError !== false"
                                     :class="['w-full text-white font-bold tracking-wide py-3.5 rounded-lg transition-all active:scale-[0.99] disabled:opacity-30', editingExpenseId ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-900 dark:bg-emerald-600 dark:hover:bg-emerald-500 hover:bg-slate-800']">
                                     {{ editingExpenseId ? '更新明細' : '寫入明細庫' }}
                                 </button>
@@ -416,8 +547,14 @@
                                     <li v-for="expense in expenses" :key="expense.id"
                                         :class="['p-4 rounded-lg border transition-all group flex justify-between items-start', editingExpenseId === expense.id ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800']">
                                         <div class="flex-1">
-                                            <div class="font-extrabold text-slate-900 dark:text-white">{{
-                                                expense.description }}</div>
+                                            <div
+                                                class="font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                                                <span v-if="isDirectTransfer(expense)"
+                                                    class="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400 text-[10px] px-1.5 py-0.5 rounded font-black tracking-widest">
+                                                    轉交/借款
+                                                </span>
+                                                {{ expense.description }}
+                                            </div>
                                             <div class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">由
                                                 {{ getPersonName(expense.payerId) }} 墊付 <span
                                                     class="text-emerald-600 dark:text-emerald-400 font-black ml-1">{{
@@ -425,14 +562,23 @@
                                             <div
                                                 class="text-xs text-slate-400 dark:text-slate-500 mt-2 flex flex-wrap gap-1 items-center">
                                                 <span>分給: </span>
-                                                <span v-for="(pid, idx) in expense.involvedPersonIds"
-                                                    :key="'invShow'+pid"
-                                                    class="bg-slate-200/50 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300">
-                                                    {{ getPersonName(pid) }}
-                                                    <span
-                                                        v-if="expense.fractionalAmounts && expense.fractionalAmounts[pid]"
-                                                        class="text-[9px] text-emerald-500 ml-1 font-bold">({{expense.fractionalAmounts[pid]}})</span>
+                                                <span
+                                                    v-if="expense.involvedPersonIds.length === persons.length && (!expense.fractionalAmounts || Object.keys(expense.fractionalAmounts).length === 0)"
+                                                    class="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded font-bold border border-emerald-100 dark:border-emerald-800/50">
+                                                    ✨ 全體均攤
                                                 </span>
+                                                <template v-else>
+                                                    <span v-for="(pid, idx) in expense.involvedPersonIds"
+                                                        :key="'invShow'+pid"
+                                                        class="bg-slate-200/50 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300 font-medium">
+                                                        {{ getPersonName(pid) }}
+                                                        <span
+                                                            v-if="expense.fractionalAmounts && expense.fractionalAmounts[pid]"
+                                                            class="text-[9px] text-emerald-500 dark:text-emerald-400 ml-1 font-bold">
+                                                            ({{ expense.fractionalAmounts[pid] }})
+                                                        </span>
+                                                    </span>
+                                                </template>
                                             </div>
                                         </div>
                                         <div v-if="!isReadOnly" class="flex gap-1.5 ml-3 shrink-0">
@@ -630,9 +776,74 @@
             </div>
 
         </div>
+        <div v-if="showCalculator"
+            class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+            @click.self="closeCalculator(false)">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-5 w-full max-w-[300px] border border-slate-100 dark:border-slate-800">
+                <div
+                    class="bg-slate-50 dark:bg-slate-950 rounded-xl p-4 mb-4 border border-slate-200 dark:border-slate-800 text-right overflow-x-auto no-scrollbar">
+                    <div class="text-2xl font-black text-slate-800 dark:text-white tracking-wider tabular-nums">{{
+                        calcInput || '0' }}</div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-2 mb-4">
+                    <button @click="calcInput = ''"
+                        class="col-span-2 py-3 bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold rounded-xl active:scale-95 transition-transform">C
+                        清除</button>
+                    <button @click="appendCalc('/')"
+                        class="py-3 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-bold rounded-xl active:scale-95 transition-transform">÷</button>
+                    <button @click="appendCalc('*')"
+                        class="py-3 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-bold rounded-xl active:scale-95 transition-transform">×</button>
+
+                    <button @click="appendCalc('7')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">7</button>
+                    <button @click="appendCalc('8')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">8</button>
+                    <button @click="appendCalc('9')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">9</button>
+                    <button @click="appendCalc('-')"
+                        class="py-3 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-bold rounded-xl active:scale-95 transition-transform">-</button>
+
+                    <button @click="appendCalc('4')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">4</button>
+                    <button @click="appendCalc('5')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">5</button>
+                    <button @click="appendCalc('6')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">6</button>
+                    <button @click="appendCalc('+')"
+                        class="py-3 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-bold rounded-xl active:scale-95 transition-transform">+</button>
+
+                    <button @click="appendCalc('1')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">1</button>
+                    <button @click="appendCalc('2')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">2</button>
+                    <button @click="appendCalc('3')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">3</button>
+                    <button @click="calcEvaluate"
+                        class="row-span-2 py-3 bg-slate-900 text-white dark:bg-emerald-600 font-bold rounded-xl active:scale-95 transition-transform shadow-md">=</button>
+
+                    <button @click="appendCalc('0')"
+                        class="col-span-2 py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">0</button>
+                    <button @click="appendCalc('.')"
+                        class="py-3 bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 font-bold rounded-xl text-lg shadow-sm active:scale-95 transition-transform">.</button>
+                </div>
+
+                <div class="flex gap-2">
+                    <button @click="closeCalculator(false)"
+                        class="flex-1 py-3 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 font-bold rounded-xl">取消</button>
+                    <button @click="closeCalculator(true)"
+                        class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md">完成</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Core Scripts -->
+    <!-- ==============================================
+         【系統初始化與 Firebase 依賴載入】
+         在此區塊載入 Vue 3 核心庫與 Firebase 的各項服務模組。
+    =================================================== -->
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
@@ -642,22 +853,59 @@
 
         createApp({
             setup() {
+                // ==========================================
+                // 1. 【使用者驗證與權限管理 (Auth & Permissions)】
+                // 控制使用者的登入狀態、身份隔離與安全防護機制。
+                // ==========================================
                 const isCheckingAuth = ref(true);
                 const currentUser = ref(null);
 
+                // ==========================================
+                // 2. 【活動基本資料與人員名單 (Core Data Models)】
+                // 存放建立一個「分帳活動」所需的重要實體。
+                // ==========================================
                 const eventTitle = ref('');
                 const persons = ref([]);
                 const myPreferredName = ref('我');
                 const recentContacts = ref([]);
 
+                // ==========================================
+                // 3. 【記帳明細管理 (Expenses Tracking)】
+                // 控制所有消費項目的增刪、編輯與複雜的分帳計算。
+                // ==========================================
                 const expenses = ref([]);
                 const newExpense = ref(getEmptyExpenseObject());
                 const editingExpenseId = ref(null);
 
+                // ==========================================
+                // 4. 【多國貨幣與匯率串接 (Currency & Exchange API)】
+                // 處理免費開源匯率 API 的抓取、更新及狀態顯示。
+                // ==========================================
                 const eventRates = ref({ 'TWD': 1, 'THB': 0.9, 'JPY': 0.22, 'USD': 32.5, 'KRW': 0.024 });
                 const showRateModal = ref(false);
                 const isFetchingRates = ref(false);
                 const ratesLastUpdatedAt = ref('');
+
+                // 用來儲存進入編輯時的歷史匯率
+                const editingSnapshotRate = ref(null);
+                // 記錄使用者是否手動點擊了「更新匯率」
+                const isRateManuallyUpdated = ref(false);
+                // 動態決定當下該用哪個匯率
+                const activeExchangeRate = computed(() => {
+                    // 如果在編輯模式，且使用者沒有要求更新，就用歷史快照
+                    if (editingExpenseId.value && !isRateManuallyUpdated.value && editingSnapshotRate.value) {
+                        return editingSnapshotRate.value;
+                    }
+                    // 否則 (新增模式、或已按更新)，使用最新匯率
+                    return eventRates.value[newExpense.value.currency] || 1;
+                });
+
+                // 如果使用者在編輯時「切換了幣別」(例如 JPY 改 USD)，歷史匯率就無效了，強制使用新匯率
+                watch(() => newExpense.value.currency, (newVal, oldVal) => {
+                    if (editingExpenseId.value && oldVal && newVal !== oldVal) {
+                        isRateManuallyUpdated.value = true;
+                    }
+                });
 
                 const fetchLatestRates = async (showFeedbackToast = false) => {
                     isFetchingRates.value = true;
@@ -674,7 +922,7 @@
                             });
                             if (data.time_last_update_utc) {
                                 const d = new Date(data.time_last_update_utc);
-                                ratesLastUpdatedAt.value = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                                ratesLastUpdatedAt.value = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                             }
                             showToast('🔄 已成功同步全球最新即時匯率！');
                             if (editEventId.value) syncStateToCloud();
@@ -710,6 +958,10 @@
                     if (editEventId.value) syncStateToCloud();
                 };
 
+                // ==========================================
+                // 5. 【雲端同步與保存 (Firebase Sync & Save)】
+                // 處理表單的自動草稿紀錄以及正式發布到資料庫的流程。
+                // ==========================================
                 const syncStateToCloud = async () => {
                     if (!editEventId.value || !db || isReadOnly.value) return;
                     isSaving.value = true;
@@ -735,6 +987,10 @@
                 const handleTitleChange = () => { if (editEventId.value) syncStateToCloud(); };
                 const closeRateModal = () => { showRateModal.value = false; if (editEventId.value) syncStateToCloud(); };
 
+                // ==========================================
+                // 6. 【即時訂閱與權限識別 (Realtime DB Subscription)】
+                // 進入特定活動網址時，監聽該活動的即時更新並確認使用者身分。
+                // ==========================================
                 const subscribeToEvent = (id) => {
                     onSnapshot(doc(db, 'events', id), (snap) => {
                         if (!snap.exists()) return;
@@ -805,9 +1061,114 @@
                 let expenseIdCounter = 1;
 
                 function getEmptyExpenseObject() {
-                    return { description: '', amount: null, currency: 'TWD', payerId: '', involvedPersonIds: [], fractionalAmounts: {} };
+                    return {
+                        description: '',
+                        amount: null, // 改為可接受數學算式的字串或數字
+                        currency: 'TWD',
+                        payerId: '',
+                        involvedPersonIds: [],
+                        fractionalAmounts: {},
+                        feePercentage: 0,
+                        splitMode: 'equal', // 'equal'(均攤), 'shares'(按份數), 'exact'(指定金額)
+                        shares: {}
+                    };
                 }
 
+                const showCalculator = ref(false);
+                const calcInput = ref('');
+
+                const openCalculator = () => {
+                    calcInput.value = newExpense.value.amount ? String(newExpense.value.amount) : '';
+                    showCalculator.value = true;
+                };
+                // 【防呆 1】即時過濾：只允許數字、小數點與四則運算符號
+                const handleAmountInput = (e) => {
+                    // 將輸入值替換掉所有非數字、非小數點、非運算符號的字元 (包含中文、英文、全形符號)
+                    let val = String(e.target.value).replace(/[^0-9+\-*/.]/g, '');
+
+                    // 簡單防護：避免連續打兩個小數點
+                    val = val.replace(/\.{2,}/g, '.');
+
+                    newExpense.value.amount = val;
+                };
+
+                // 【防呆 2】離開焦點時：自動計算算式結果並阻擋負數
+                const handleAmountBlur = () => {
+                    if (!newExpense.value.amount) return;
+                    try {
+                        const result = new Function('return ' + newExpense.value.amount)();
+                        if (!isNaN(result) && isFinite(result) && result > 0) {
+                            newExpense.value.amount = Number(result.toFixed(2));
+                        } else if (result < 0) {
+                            newExpense.value.amount = '';
+                            showToast('⚠️ 金額不可為負數');
+                        }
+                    } catch (e) {
+                        // 如果算式不完整 (例如輸入 "100+")，保留給使用者繼續打，不強制清空
+                    }
+                };
+                const closeCalculator = (save) => {
+                    if (save && calcInput.value) {
+                        try {
+                            // 安全的數學運算 (取代危險的 eval)
+                            const result = new Function('return ' + calcInput.value)();
+                            newExpense.value.amount = Number(result.toFixed(2));
+                        } catch (e) {
+                            showToast('計算格式錯誤，請檢查算式');
+                            return;
+                        }
+                    }
+                    showCalculator.value = false;
+                };
+
+                const appendCalc = (val) => { calcInput.value += val; };
+                const calcEvaluate = () => {
+                    try { calcInput.value = String(new Function('return ' + calcInput.value)()); } catch (e) { }
+                };
+
+                // 即時計算包含手續費/稅的最終總額
+                const currentCalculatedTotal = computed(() => {
+                    let base = 0;
+                    if (newExpense.value.amount) {
+                        try {
+                            // 嘗試即時解析算式 (讓手打 100+50 也能即時預覽 150)
+                            base = new Function('return ' + newExpense.value.amount)() || 0;
+                        } catch (e) {
+                            // 若算式尚未打完，退回 0
+                            base = 0;
+                        }
+                    }
+
+                    // 終極防護：避免算到一半出現負數或無限大
+                    if (isNaN(base) || base < 0 || !isFinite(base)) base = 0;
+
+                    const fee = base * (newExpense.value.feePercentage / 100);
+                    return Number((base + fee).toFixed(2));
+                });
+                // 計算目前在「指定金額」模式下，還剩下多少錢沒分配
+                const remainingExactAmount = computed(() => {
+                    if (newExpense.value.splitMode !== 'exact') return 0;
+                    let total = currentCalculatedTotal.value;
+                    let allocated = 0;
+                    Object.keys(newExpense.value.fractionalAmounts).forEach(k => {
+                        if (newExpense.value.involvedPersonIds.includes(Number(k))) {
+                            allocated += (Number(newExpense.value.fractionalAmounts[k]) || 0);
+                        }
+                    });
+                    // 解決 JavaScript 浮點數運算誤差
+                    return Math.round((total - allocated) * 100) / 100;
+                });
+                // 判斷指定金額模式下，是否有「未指定金額的勾選者」可以吸收餘額，或者是否完全分配完畢
+                const exactModeError = computed(() => {
+                    if (newExpense.value.splitMode !== 'exact') return false;
+
+                    // 計算有打勾，但「沒有輸入金額」的人數
+                    const unassignedCount = newExpense.value.involvedPersonIds.filter(id => !newExpense.value.fractionalAmounts[id]).length;
+
+                    if (remainingExactAmount.value < 0) return 'over'; // 超支
+                    if (remainingExactAmount.value > 0 && unassignedCount === 0) return 'unallocated'; // 還有剩錢，但沒人可以吸收
+                    return false;
+                });
                 // Initializer
                 onMounted(() => {
                     try { recentContacts.value = JSON.parse(localStorage.getItem('splitBillContacts')) || []; } catch (e) { }
@@ -912,23 +1273,63 @@
                 };
                 const fastAddPerson = (n) => { newPersonName.value = n; addPerson(); };
                 const removePerson = (id) => {
-                    if (expenses.value.some(e => e.payerId === id || e.involvedPersonIds.includes(id))) { showToast('無法刪除：該員已牽涉在明細中'); return; }
+                    if (expenses.value.some(e => e.payerId === id || e.involvedPersonIds.includes(id))) {
+                        showToast('無法刪除：該員已牽涉在明細中');
+                        return;
+                    }
                     const p = persons.value.find(per => per.id === id);
                     persons.value = persons.value.filter(p => p.id !== id);
+
+                    // 【新增】清理輸入表單中的殘留紀錄
+                    newExpense.value.involvedPersonIds = newExpense.value.involvedPersonIds.filter(pid => pid !== id);
+                    delete newExpense.value.fractionalAmounts[id];
+                    delete newExpense.value.shares[id];
+                    if (newExpense.value.payerId === id) newExpense.value.payerId = '';
+
                     if (p) addSystemLog(`${myPreferredName.value} 移除了夥伴: ${p.name}`);
                 };
 
                 const addExpense = () => {
                     let e = newExpense.value;
+                    // 驗證基底金額是否合法
                     if (!e.payerId || !e.description || !e.amount || e.involvedPersonIds.length === 0) return;
 
-                    e.fractionalAmounts = e.fractionalAmounts || {};
-                    // Cleanup invisible fractionals
-                    Object.keys(e.fractionalAmounts).forEach(k => { if (!e.involvedPersonIds.includes(Number(k))) delete e.fractionalAmounts[k]; });
+                    // 取得包含手續費/稅的最終應分攤總額
+                    let finalAmount = currentCalculatedTotal.value;
 
-                    // Attach static exchange rate snapshot for stability
+                    // 準備寫入資料庫的 Clone
                     let clone = JSON.parse(JSON.stringify(e));
-                    clone.exchangeRate = eventRates.value[clone.currency] || 1;
+                    clone.amount = finalAmount; // 覆寫為最終總額
+                    clone.exchangeRate = activeExchangeRate.value;
+                    clone.fractionalAmounts = {};
+
+                    // 核心邏輯：將不同的分攤策略轉換為舊版相容的儲存格式
+                    if (clone.splitMode === 'equal') {
+                        // 均攤模式：保持空物件，讓原有的結算引擎自動平分
+                        clone.fractionalAmounts = {};
+                    }
+                    else if (clone.splitMode === 'shares') {
+                        // 按份數模式：精算每個人該付的絕對金額寫入 fractionalAmounts
+                        let totalShares = 0;
+                        clone.involvedPersonIds.forEach(pid => {
+                            totalShares += (clone.shares[pid] || 1);
+                        });
+                        if (totalShares > 0) {
+                            let amountPerShare = finalAmount / totalShares;
+                            clone.involvedPersonIds.forEach(pid => {
+                                // 將每個人的份數轉換為絕對金額
+                                clone.fractionalAmounts[pid] = Number(((clone.shares[pid] || 1) * amountPerShare).toFixed(2));
+                            });
+                        }
+                    }
+                    else if (clone.splitMode === 'exact') {
+                        // 指定金額模式：只保留有打勾且有填數字的項目
+                        Object.keys(e.fractionalAmounts).forEach(k => {
+                            if (clone.involvedPersonIds.includes(Number(k)) && e.fractionalAmounts[k]) {
+                                clone.fractionalAmounts[k] = e.fractionalAmounts[k];
+                            }
+                        });
+                    }
 
                     if (editingExpenseId.value) {
                         const idx = expenses.value.findIndex(x => x.id === editingExpenseId.value);
@@ -938,7 +1339,7 @@
                     } else {
                         clone.id = expenseIdCounter++;
                         expenses.value.unshift(clone);
-                        addSystemLog(`${myPreferredName.value} 登錄了花費: ${clone.description} (${clone.amount})`);
+                        addSystemLog(`${myPreferredName.value} 登錄了花費: ${clone.description} (${clone.currency} ${clone.amount})`);
                     }
                     cancelEditExpense();
                 };
@@ -946,10 +1347,29 @@
                 const startEditExpense = (e) => {
                     editingExpenseId.value = e.id;
                     newExpense.value = JSON.parse(JSON.stringify(e));
+
+                    // 【新增】向後相容防呆：處理舊版資料沒有 splitMode 等新欄位的情況
+                    if (!newExpense.value.splitMode) {
+                        // 如果舊資料有填寫絕對金額，就判定為「指定金額」，否則預設為「均攤」
+                        if (newExpense.value.fractionalAmounts && Object.keys(newExpense.value.fractionalAmounts).length > 0) {
+                            newExpense.value.splitMode = 'exact';
+                        } else {
+                            newExpense.value.splitMode = 'equal';
+                        }
+                    }
+                    // 確保物件結構完整，避免 Vue 綁定報錯
+                    if (!newExpense.value.shares) newExpense.value.shares = {};
+                    if (!newExpense.value.feePercentage) newExpense.value.feePercentage = 0;
+
+                    editingSnapshotRate.value = e.exchangeRate || eventRates.value[e.currency] || 1;
+                    isRateManuallyUpdated.value = false; // 重置更新狀態
                     window.scrollTo({ top: 300, behavior: 'smooth' });
                 };
                 const cancelEditExpense = () => {
                     editingExpenseId.value = null;
+                    // 清空歷史匯率狀態
+                    editingSnapshotRate.value = null;
+                    isRateManuallyUpdated.value = false;
                     newExpense.value = getEmptyExpenseObject();
                     newExpense.value.involvedPersonIds = persons.value.map(p => p.id);
                 };
@@ -961,14 +1381,40 @@
                 };
 
                 const getPersonName = (id) => { const p = persons.value.find(p => p.id === id); return p ? p.name : '...'; };
+                // 判斷是否為單純的「轉交/借款」
+                const isDirectTransfer = (exp) => {
+                    // 情境 1：完美操作 (只勾選 1 個人，且那個人不是墊付者)
+                    if (exp.involvedPersonIds.length === 1 && exp.involvedPersonIds[0] !== exp.payerId) {
+                        return true;
+                    }
 
+                    // 情境 2：防呆操作 (勾選了多人，但在「指定金額」中，某個非墊付者承擔了 100% 的總金額)
+                    if (exp.fractionalAmounts) {
+                        const keys = Object.keys(exp.fractionalAmounts);
+                        // 如果只有一個人被指定了金額
+                        if (keys.length === 1) {
+                            const debtorId = Number(keys[0]);
+                            // 且這個人不是墊付者，且他指定的金額等於總金額
+                            if (debtorId !== exp.payerId && exp.fractionalAmounts[debtorId] === exp.amount) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                };
+                // ==========================================
+                // 7. 【核心演算法：最佳化結算路徑 (Grand Debt Simplification)】
+                // 分析所有明細，消弭雙向欠款並濃縮出最精簡的「誰該匯給誰多少錢」。
+                // ==========================================
                 const totalAmountAsTwd = computed(() => {
                     let t = 0;
                     expenses.value.forEach(e => { t += e.amount * (e.exchangeRate || 1); });
                     return Math.round(t);
                 });
 
-                // The Settlement Logic (Exact Pairwise Match)
+                // ==========================================
+                // 8. 【結算結果輸出】
+                // ==========================================
                 const settlements = computed(() => {
                     const pairwise = {};
                     const addDebt = (debtor, creditor, amt) => {
@@ -995,7 +1441,7 @@
 
                         if (eqCount > 0 && dynTotal > 0) {
                             let sp = dynTotal / eqCount;
-                            exp.involvedPersonIds.forEach(pid => { 
+                            exp.involvedPersonIds.forEach(pid => {
                                 if (!exp.fractionalAmounts || exp.fractionalAmounts[pid] === undefined || exp.fractionalAmounts[pid] === null) {
                                     addDebt(pid, payerId, sp);
                                 }
@@ -1056,7 +1502,22 @@
                 };
                 watch(expenses, () => { if (showChart.value) updateChartDraw(); }, { deep: true });
                 watch(showChart, (val) => { if (val) setTimeout(updateChartDraw, 100); });
+                // 1. 監聽分攤模式切換
+                watch(() => newExpense.value.splitMode, (newMode) => {
+                    if (newMode === 'equal') {
+                        selectAllInvolved(); // 切換到均攤時，自動全選
+                    }
+                });
 
+                // 2. 全選功能
+                const selectAllInvolved = () => {
+                    newExpense.value.involvedPersonIds = persons.value.map(p => p.id);
+                };
+
+                // 3. 全不選功能
+                const deselectAllInvolved = () => {
+                    newExpense.value.involvedPersonIds = [];
+                };
                 // Export Engine
                 const previewImageBlobUrl = ref(null);
 
@@ -1077,7 +1538,7 @@
                                 showToast("已透過原生選單分享");
                                 return;
                             }
-                        } catch (err) {}
+                        } catch (err) { }
                     }
                     fallbackDownload(blob, filename);
                 };
@@ -1145,7 +1606,9 @@
                     totalAmountAsTwd, settlements, saveToFirebase, isSaving, exportImageReport,
                     toastMsg, confirmModal, closeConfirm, promptModal, closePrompt,
                     handleTitleChange, closeRateModal,
-                    isVisitor, selectedIdentity, isClaiming, claimIdentity
+                    isVisitor, selectedIdentity, isClaiming, claimIdentity, showCalculator, calcInput, openCalculator,
+                    closeCalculator, appendCalc, calcEvaluate, currentCalculatedTotal, editingSnapshotRate, isRateManuallyUpdated, activeExchangeRate,
+                    selectAllInvolved, deselectAllInvolved, remainingExactAmount, exactModeError, isDirectTransfer, handleAmountInput, handleAmountBlur
                 };
             }
         }).mount('#app');

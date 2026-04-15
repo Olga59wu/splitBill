@@ -246,17 +246,22 @@
         <div v-if="previewImageBlobUrl"
             class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-fade-in"
             @click.self="previewImageBlobUrl = null">
-            <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-4 w-full max-w-sm relative flex flex-col items-center border border-slate-100 dark:border-slate-800">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-4 w-full max-w-sm relative flex flex-col items-center border border-slate-100 dark:border-slate-800">
                 <button @click="previewImageBlobUrl = null"
                     class="absolute top-2 right-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors">
                     ✕
                 </button>
-                <div class="mb-3 text-center w-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 p-3 rounded-2xl">
+                <div
+                    class="mb-3 text-center w-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 p-3 rounded-2xl">
                     <p class="font-bold">✅ 圖片產生成功</p>
-                    <p class="text-xs mt-1">您的系統不支援自動複製。<br/>請<strong>長按下方圖片</strong>選擇「拷貝」或「分享」即可貼到 LINE！</p>
+                    <p class="text-xs mt-1">您的系統不支援自動複製。<br />請<strong>長按下方圖片</strong>選擇「拷貝」或「分享」即可貼到 LINE！</p>
                 </div>
-                <img :src="previewImageBlobUrl" class="w-full h-auto rounded-xl shadow-md border border-slate-200 dark:border-slate-700 select-none" style="-webkit-touch-callout: default;"/>
-                <button @click="previewImageBlobUrl = null" class="mt-4 px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl w-full">完成</button>
+                <img :src="previewImageBlobUrl"
+                    class="w-full h-auto rounded-xl shadow-md border border-slate-200 dark:border-slate-700 select-none"
+                    style="-webkit-touch-callout: default;" />
+                <button @click="previewImageBlobUrl = null"
+                    class="mt-4 px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl w-full">完成</button>
             </div>
         </div>
 
@@ -277,22 +282,31 @@
                 class="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-50 transition-colors">
                 <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
                     <div class="flex items-center gap-2 sm:gap-3">
-                        <button @click="goBack" class="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" title="返回上一頁">
-                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
+                        <button @click="goBack"
+                            class="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                            title="返回上一頁">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M15 19l-7-7 7-7" />
+                            </svg>
                         </button>
                         <div
                             class="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-xl shadow-inner border border-slate-200/50 dark:border-slate-700/50 hidden sm:flex">
                             💳</div>
                         <div>
-                            <h1 class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+                            <h1
+                                class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
                                 帳務總覽</h1>
-                            <p class="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400">所有活動紀錄</p>
+                            <p class="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400">所有活動紀錄
+                            </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-1 sm:gap-2">
-                        <button @click="handleSignOut" class="px-2 sm:px-3 py-2 text-xs sm:text-sm text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 font-bold transition-colors whitespace-nowrap">登出</button>
+                        <button @click="handleSignOut"
+                            class="px-2 sm:px-3 py-2 text-xs sm:text-sm text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 font-bold transition-colors whitespace-nowrap">登出</button>
                         <button v-if="isAdminUser" @click="openAdminModal"
-                            class="p-2 text-xl hover:scale-110 transition-transform hidden sm:block" title="白名單管理">🛡️</button>
+                            class="p-2 text-xl hover:scale-110 transition-transform hidden sm:block"
+                            title="白名單管理">🛡️</button>
                         <a href="./split_bill.html"
                             class="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm rounded-xl shadow-sm hover:shadow-md hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 flex items-center gap-1 sm:gap-2">
                             <span>➕</span><span class="hidden sm:inline">新增</span>
@@ -329,7 +343,29 @@
                             :class="['shrink-0 pb-2 text-sm font-bold transition-colors border-b-2 z-10', currentTab === 'grand_total' ? 'border-amber-500 dark:border-amber-400 text-amber-600 dark:text-amber-400' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300']">持續累積總帳</button>
                         <div class="absolute bottom-0 left-0 w-full h-[2px] bg-slate-100 dark:bg-slate-800 z-0"></div>
                     </div>
+                    <div v-if="currentTab !== 'grand_total' && !isLoadingHistory"
+                        class="mb-6 flex flex-col sm:flex-row sm:items-center gap-3 animate-fade-in bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                        <label class="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">📅 區間篩選：</label>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input type="month" v-model="filterStartMonth"
+                                class="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none">
 
+                            <span class="text-xs font-bold text-slate-400">至</span>
+
+                            <input type="month" v-model="filterEndMonth"
+                                class="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none">
+
+                            <button v-if="filterStartMonth || filterEndMonth"
+                                @click="filterStartMonth = ''; filterEndMonth = ''"
+                                class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors ml-auto sm:ml-2">
+                                清除過濾
+                            </button>
+                            <span v-else
+                                class="text-[10px] font-bold text-slate-400 bg-slate-200/50 dark:bg-slate-800 px-2 py-1 rounded ml-auto sm:ml-2">
+                                預設顯示: 近兩個月
+                            </span>
+                        </div>
+                    </div>
                     <div v-if="isLoadingHistory" class="flex justify-center py-20">
                         <svg class="animate-spin h-8 w-8 text-slate-300 dark:text-slate-600"
                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -374,31 +410,34 @@
                                     <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1">
                                         <div
                                             class="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-3">
-                                            <span class="text-xl font-black text-slate-900 dark:text-white truncate max-w-[100px] sm:max-w-none">{{ stl.from
+                                            <span
+                                                class="text-xl font-black text-slate-900 dark:text-white truncate max-w-[100px] sm:max-w-none">{{
+                                                stl.from
                                                 }}</span>
-                                            <svg class="h-4 w-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
+                                            <svg class="h-4 w-4 shrink-0 text-emerald-500" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                                     d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                             </svg>
-                                            <span class="text-xl font-black text-emerald-600 dark:text-emerald-400 truncate max-w-[100px] sm:max-w-none">{{
+                                            <span
+                                                class="text-xl font-black text-emerald-600 dark:text-emerald-400 truncate max-w-[100px] sm:max-w-none">{{
                                                 stl.to }}</span>
                                         </div>
                                         <div class="font-black text-slate-900 dark:text-white tabular-nums tracking-tight text-3xl sm:text-2xl drop-shadow-sm transition-all sm:ml-auto"
                                             :class="{'animate-flash-green': flashGrandTotal}">NT$ {{ stl.amount }}</div>
                                     </div>
-                                    <div class="flex items-center justify-end sm:justify-start gap-3 border-t sm:border-0 border-slate-50 dark:border-slate-800 pt-3 sm:pt-0 shrink-0" data-html2canvas-ignore>
-                                        <button @click="copyRowImage(stlIdx, stl)"
-                                                :disabled="exportingRow === stlIdx"
-                                                class="px-3 py-2.5 sm:py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg shadow-sm active:scale-95 transition-all outline-none"
-                                                title="產生單筆請款圖">
-                                                <span v-if="exportingRow === stlIdx"
-                                                    class="animate-spin text-sm block">⏳</span>
-                                                <span v-else class="text-sm block">📸</span>
+                                    <div class="flex items-center justify-end sm:justify-start gap-3 border-t sm:border-0 border-slate-50 dark:border-slate-800 pt-3 sm:pt-0 shrink-0"
+                                        data-html2canvas-ignore>
+                                        <button @click="copyRowImage(stlIdx, stl)" :disabled="exportingRow === stlIdx"
+                                            class="px-3 py-2.5 sm:py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg shadow-sm active:scale-95 transition-all outline-none"
+                                            title="產生單筆請款圖">
+                                            <span v-if="exportingRow === stlIdx"
+                                                class="animate-spin text-sm block">⏳</span>
+                                            <span v-else class="text-sm block">📸</span>
                                         </button>
                                         <button @click="markSettled(stl)"
-                                                class="px-5 py-2.5 sm:px-4 sm:py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-lg shadow-sm active:scale-95 transition-all outline-none">
-                                                結清
+                                            class="px-5 py-2.5 sm:px-4 sm:py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-lg shadow-sm active:scale-95 transition-all outline-none">
+                                            結清
                                         </button>
                                     </div>
                                 </div>
@@ -407,8 +446,11 @@
                     </div>
 
                     <div v-else-if="currentList.length === 0"
-                        class="text-center py-20 text-slate-400 dark:text-slate-500 font-medium">
-                        目錄空空如也。
+                        class="text-center py-20 flex flex-col items-center justify-center animate-fade-in">
+                        <span class="text-4xl mb-3 opacity-50">📭</span>
+                        <p class="text-slate-400 dark:text-slate-500 font-bold text-sm">
+                            {{ (filterStartMonth || filterEndMonth) ? '指定區間內沒有任何活動紀錄。' : '近兩個月沒有任何活動，或是已經全數結清了。' }}
+                        </p>
                     </div>
 
                     <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -440,11 +482,7 @@
                                         class="flex-1 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-emerald-200 dark:border-emerald-800/50">
                                         🔗 分享
                                     </button>
-                                    <button v-if="!docItem.isArchived" @click="toggleArchive($event, docItem.id, true)"
-                                        class="flex-1 py-1.5 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-slate-200 dark:border-none">
-                                        📦 封存
-                                    </button>
-                                    <button v-else @click="toggleArchive($event, docItem.id, false)"
+                                    <button v-if="docItem.isArchived" @click="toggleArchive($event, docItem.id, false)"
                                         class="flex-1 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800/50">
                                         📤 復原
                                     </button>
@@ -481,6 +519,10 @@
         </div>
     </div>
 
+    <!-- ==============================================
+         【歷史紀錄與總帳結算模組 (History & Grand Settlement)】
+         處理跨活動的資料拉取、多帳本匯總以及全局對帳算式。
+    =================================================== -->
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
@@ -490,6 +532,9 @@
 
         createApp({
             setup() {
+                // ==========================================
+                // 1. 【狀態與權限控管 (State & Auth)】
+                // ==========================================
                 const isCheckingAuth = ref(true);
                 const currentUser = ref(null);
                 const isAdminUser = ref(false);
@@ -498,6 +543,10 @@
                 const currentTab = ref('active');
                 const flashGrandTotal = ref(false);
 
+                // ==========================================
+                // 2. 【跨活動全局結算演算法 (Global Grand Total)】
+                // 掃描所有目前活躍的活動，動態將各活動的債務合併抵銷。
+                // ==========================================
                 const grandTotalSummary = computed(() => {
                     const pairwise = {};
                     const addDebt = (debtor, creditor, amt) => {
@@ -516,7 +565,7 @@
                             }
 
                             const payerName = doc.persons.find(p => p.id === exp.payerId)?.name || '未知';
-                            
+
                             let dynamicTotal = baseAmount;
                             let equalCount = 0;
                             const targets = exp.involvedPersonIds || [];
@@ -572,10 +621,14 @@
                             }
                         }
                     }
-                    settlements.sort((a,b) => b.amount - a.amount);
+                    settlements.sort((a, b) => b.amount - a.amount);
                     return { settlements };
                 });
 
+                // ==========================================
+                // 3. 【全域結清邏輯 (Global Debt Settlement)】
+                // 產生一筆特製的轉帳紀錄，抵銷該筆欠款的總額。
+                // ==========================================
                 const markSettled = async (stl) => {
                     const isLastDebt = grandTotalSummary.value.settlements.length <= 1;
                     const confirm = await showConfirm(
@@ -634,6 +687,56 @@
                         await loadHistory();
                     } catch (err) {
                         showToast('結清失敗，請確認權限或網路狀態。');
+                    }
+                };
+
+                // 【新增】區間篩選器狀態
+                const filterStartMonth = ref('');
+                const filterEndMonth = ref('');
+                // 【新增防呆】監聽區間變化，如果「開始 > 結束」，自動幫使用者對調
+                watch([filterStartMonth, filterEndMonth], ([start, end]) => {
+                    if (start && end) {
+                        const startNum = Number(start.replace('-', ''));
+                        const endNum = Number(end.replace('-', ''));
+
+                        if (startNum > endNum) {
+                            // 自動對調數值
+                            filterStartMonth.value = end;
+                            filterEndMonth.value = start;
+                            showToast('🔄 已自動為您校正時間先後順序');
+                        }
+                    }
+                });
+                // 【修改】判斷日期是否落在指定的區間內
+                const isWithinFilter = (timestamp) => {
+                    if (!timestamp) return false;
+                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+
+                    // 將日期轉為 YYYYMM 的純數字，方便比對大小 (例如 2026 年 3 月變成 202603)
+                    const dateNum = date.getFullYear() * 100 + (date.getMonth() + 1);
+
+                    // 如果使用者有設定任何區間條件
+                    if (filterStartMonth.value || filterEndMonth.value) {
+                        let startNum = 0;
+                        let endNum = 999999; // 代表無限大
+
+                        if (filterStartMonth.value) {
+                            const [sy, sm] = filterStartMonth.value.split('-');
+                            startNum = Number(sy) * 100 + Number(sm);
+                        }
+                        if (filterEndMonth.value) {
+                            const [ey, em] = filterEndMonth.value.split('-');
+                            endNum = Number(ey) * 100 + Number(em);
+                        }
+
+                        return dateNum >= startNum && dateNum <= endNum;
+                    } else {
+                        // 預設：顯示近兩個月 (以今天為基準往回推 2 個月)
+                        const twoMonthsAgo = new Date();
+                        twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+                        const defaultStartNum = twoMonthsAgo.getFullYear() * 100 + (twoMonthsAgo.getMonth() + 1);
+
+                        return dateNum >= defaultStartNum;
                     }
                 };
 
@@ -748,6 +851,10 @@
                     });
                 });
 
+                // ==========================================
+                // 4. 【結算單影像生成與分享 (Image Generation & Sharing)】
+                // 處理將 HTML 畫面無痛轉為高畫質圖片並觸發分享或剪貼簿 API。
+                // ==========================================
                 const previewImageBlobUrl = ref(null);
 
                 const fallbackDownload = (blob, filename) => {
@@ -756,7 +863,7 @@
 
                 const shareOrDownloadBlob = async (blob, filename, successMsg) => {
                     const file = new File([blob], filename, { type: "image/png" });
-                    
+
                     try {
                         const item = new window.ClipboardItem({ 'image/png': blob });
                         await navigator.clipboard.write([item]);
@@ -769,9 +876,9 @@
                                 showToast("已透過原生選單分享");
                                 return;
                             }
-                        } catch (err) {}
+                        } catch (err) { }
                     }
-                    
+
                     // IF ALL FAILS -> MODAL!
                     fallbackDownload(blob, filename);
                 };
@@ -866,10 +973,14 @@
                     return results;
                 };
 
+                // 替換原本的 displayedHistory
                 const displayedHistory = computed(() => {
                     return {
-                        active: historyList.value.filter(h => !h.isArchived),
-                        archived: historyList.value.filter(h => h.isArchived)
+                        // 進行中與已封存：套用月份篩選邏輯
+                        active: historyList.value.filter(h => !h.isArchived && isWithinFilter(h.createdAt)),
+                        archived: historyList.value.filter(h => h.isArchived && isWithinFilter(h.createdAt)),
+                        // 總帳：不受畫面篩選影響，永遠抓取全部資料
+                        grand_total: historyList.value
                     };
                 });
                 const currentList = computed(() => displayedHistory.value[currentTab.value]);
@@ -1022,7 +1133,7 @@
                     grandTotalSummary, markSettled, copyGrandTotalImage, isExporting,
                     exportingRow, copyRowImage, activeReceipt,
                     toastMsg, confirmModal, closeConfirm, flashGrandTotal,
-                    isAdminUser, showAdminModal, newWhitelistEmail, whitelistEmails, isManagingWhitelist, openAdminModal, addWhitelist, removeWhitelist
+                    isAdminUser, showAdminModal, newWhitelistEmail, whitelistEmails, isManagingWhitelist, openAdminModal, addWhitelist, removeWhitelist, filterStartMonth, filterEndMonth
                 };
             }
         }).mount('#app');
