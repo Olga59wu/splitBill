@@ -280,7 +280,8 @@
             <!-- 導覽列 -->
             <nav
                 class="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-50 transition-colors">
-                <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="max-w-5xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
+
                     <div class="flex items-center gap-2 sm:gap-3">
                         <button @click="goBack"
                             class="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
@@ -292,25 +293,35 @@
                         </button>
                         <div
                             class="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-xl shadow-inner border border-slate-200/50 dark:border-slate-700/50 hidden sm:flex">
-                            💳</div>
+                            💳
+                        </div>
                         <div>
                             <h1
                                 class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
-                                帳務總覽</h1>
+                                帳務總覽
+                            </h1>
                             <p class="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400">所有活動紀錄
                             </p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1 sm:gap-2">
-                        <button @click="handleSignOut"
-                            class="px-2 sm:px-3 py-2 text-xs sm:text-sm text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 font-bold transition-colors whitespace-nowrap">登出</button>
-                        <button v-if="isAdminUser" @click="openAdminModal"
-                            class="p-2 text-xl hover:scale-110 transition-transform hidden sm:block"
-                            title="白名單管理">🛡️</button>
+
+                    <div class="flex items-center gap-3">
+
                         <a href="./split_bill.html"
-                            class="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm rounded-xl shadow-sm hover:shadow-md hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 flex items-center gap-1 sm:gap-2">
+                            class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition-all shadow-sm flex items-center gap-1.5">
                             <span>➕</span><span class="hidden sm:inline">新增</span>
                         </a>
+
+                        <button v-if="isAdminUser" @click="openAdminModal"
+                            class="text-xl hover:scale-110 transition-transform hidden sm:block" title="白名單管理">
+                            🔱
+                        </button>
+
+                        <button @click="handleSignOut"
+                            class="text-sm font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap ml-1 md:ml-3">
+                            登出
+                        </button>
+
                     </div>
                 </div>
             </nav>
@@ -357,12 +368,12 @@
 
                             <button v-if="filterStartMonth || filterEndMonth"
                                 @click="filterStartMonth = ''; filterEndMonth = ''"
-                                class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors ml-auto sm:ml-2">
-                                清除過濾
+                                class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors ml-auto sm:ml-2">
+                                清除 (看全部)
                             </button>
                             <span v-else
                                 class="text-[10px] font-bold text-slate-400 bg-slate-200/50 dark:bg-slate-800 px-2 py-1 rounded ml-auto sm:ml-2">
-                                預設顯示: 近兩個月
+                                目前顯示：全部紀錄
                             </span>
                         </div>
                     </div>
@@ -488,7 +499,8 @@
                                         class="flex-1 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-indigo-200 dark:border-indigo-800/50">
                                         📤 復原
                                     </button>
-                                    <button @click="deleteItem($event, docItem.id)"
+                                    <button v-if="docItem.ownerUid === currentUser?.uid"
+                                        @click="deleteItem($event, docItem.id)"
                                         class="px-3 py-1.5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-lg text-xs font-bold transition-colors flex items-center justify-center border border-rose-200 dark:border-rose-800/40">
                                         🗑️
                                     </button>
@@ -515,6 +527,13 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <div v-if="hasMore && currentTab !== 'grand_total'"
+                        class="mt-8 flex justify-center animate-fade-in">
+                        <button @click="loadMore"
+                            class="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold text-sm rounded-xl transition-all shadow-sm flex items-center gap-2 active:scale-95">
+                            <span>👇</span> 載入更早的紀錄...
+                        </button>
                     </div>
                 </div>
             </div>
@@ -692,54 +711,54 @@
                     }
                 };
 
-                // 【新增】區間篩選器狀態
-                const filterStartMonth = ref('');
-                const filterEndMonth = ref('');
-                // 【新增防呆】監聽區間變化，如果「開始 > 結束」，自動幫使用者對調
+                // 自動計算當月與前一個月 (確保格式為 YYYY-MM)
+                const today = new Date();
+                const endY = today.getFullYear();
+                const endM = String(today.getMonth() + 1).padStart(2, '0');
+
+                const startD = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const startY = startD.getFullYear();
+                const startM = String(startD.getMonth() + 1).padStart(2, '0');
+
+                // 【新增】區間篩選器狀態 (直接賦予動態計算的預設值)
+                const filterStartMonth = ref(`${startY}-${startM}`);
+                const filterEndMonth = ref(`${endY}-${endM}`);
+
+                // 【新增防護防呆】監聽區間變化 (維持不變)
                 watch([filterStartMonth, filterEndMonth], ([start, end]) => {
                     if (start && end) {
                         const startNum = Number(start.replace('-', ''));
                         const endNum = Number(end.replace('-', ''));
-
                         if (startNum > endNum) {
-                            // 自動對調數值
                             filterStartMonth.value = end;
                             filterEndMonth.value = start;
                             showToast('🔄 已自動為您校正時間先後順序');
                         }
                     }
                 });
+
                 // 【修改】判斷日期是否落在指定的區間內
                 const isWithinFilter = (timestamp) => {
                     if (!timestamp) return false;
                     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-
-                    // 將日期轉為 YYYYMM 的純數字，方便比對大小 (例如 2026 年 3 月變成 202603)
                     const dateNum = date.getFullYear() * 100 + (date.getMonth() + 1);
 
-                    // 如果使用者有設定任何區間條件
-                    if (filterStartMonth.value || filterEndMonth.value) {
-                        let startNum = 0;
-                        let endNum = 999999; // 代表無限大
-
-                        if (filterStartMonth.value) {
-                            const [sy, sm] = filterStartMonth.value.split('-');
-                            startNum = Number(sy) * 100 + Number(sm);
-                        }
-                        if (filterEndMonth.value) {
-                            const [ey, em] = filterEndMonth.value.split('-');
-                            endNum = Number(ey) * 100 + Number(em);
-                        }
-
-                        return dateNum >= startNum && dateNum <= endNum;
-                    } else {
-                        // 預設：顯示近兩個月 (以今天為基準往回推 2 個月)
-                        const twoMonthsAgo = new Date();
-                        twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-                        const defaultStartNum = twoMonthsAgo.getFullYear() * 100 + (twoMonthsAgo.getMonth() + 1);
-
-                        return dateNum >= defaultStartNum;
+                    // 邏輯精簡：當所有篩選條件均為止，預設顯示全域清單
+                    if (!filterStartMonth.value && !filterEndMonth.value) {
+                        return true;
                     }
+
+                    let startNum = 0;
+                    let endNum = 999999;
+                    if (filterStartMonth.value) {
+                        const [sy, sm] = filterStartMonth.value.split('-');
+                        startNum = Number(sy) * 100 + Number(sm);
+                    }
+                    if (filterEndMonth.value) {
+                        const [ey, em] = filterEndMonth.value.split('-');
+                        endNum = Number(ey) * 100 + Number(em);
+                    }
+                    return dateNum >= startNum && dateNum <= endNum;
                 };
 
                 const toastMsg = ref('');
@@ -859,10 +878,23 @@
                 // ==========================================
                 const previewImageBlobUrl = ref(null);
 
+                /**
+                 * 降級渲染處置 (Rendering Fallback)
+                 * 
+                 * 當瀏覽器環境無法調用原生剪貼簿 (如 iOS Safari 受限或於非 HTTPS 環境下) 時，
+                 * 將 `html2canvas` 產生之 Blob 物件轉換為本地 URL。
+                 * 提供使用者以長按圖片 (Long-press) 之方式自行下載，避免中斷分享體驗。
+                 */
                 const fallbackDownload = (blob, filename) => {
                     previewImageBlobUrl.value = URL.createObjectURL(blob);
                 };
 
+                /**
+                 * DOM 跨域渲染與原生分享 (DOM to Image Export)
+                 * 
+                 * 封裝 Web Share API (`navigator.share`) 與 Clipboard API，
+                 * 提供跨平台 (iOS/Android/Web) 之一致性憑證匯出行為。
+                 */
                 const shareOrDownloadBlob = async (blob, filename, successMsg) => {
                     const file = new File([blob], filename, { type: "image/png" });
 
@@ -881,7 +913,7 @@
                         } catch (err) { }
                     }
 
-                    // IF ALL FAILS -> MODAL!
+                    // 防護機制：例外狀況發生時，強制彈出例外捕捉視窗 (Modal)
                     fallbackDownload(blob, filename);
                 };
 
@@ -985,7 +1017,30 @@
                         grand_total: historyList.value
                     };
                 });
-                const currentList = computed(() => displayedHistory.value[currentTab.value]);
+                // 【新增】效能防護：前端分頁顯示數量
+                const displayLimit = ref(20);
+
+                // 當切換分頁 (進行中/已封存) 或改變日期區間時，重置顯示數量為 20
+                watch([currentTab, filterStartMonth, filterEndMonth], () => {
+                    displayLimit.value = 20;
+                });
+
+                // 載入更多按鈕的行為
+                const loadMore = () => {
+                    displayLimit.value += 20;
+                };
+                // 【修改】只渲染 displayLimit 數量以內的卡片，避免 DOM 爆掉
+                const currentList = computed(() => {
+                    const list = displayedHistory.value[currentTab.value];
+                    if (!list) return [];
+                    return list.slice(0, displayLimit.value);
+                });
+
+                // 【新增】判斷是否還有更多資料沒顯示
+                const hasMore = computed(() => {
+                    const list = displayedHistory.value[currentTab.value];
+                    return list && list.length > displayLimit.value;
+                });
 
                 watch(grandTotalSummary, (newVal, oldVal) => {
                     if (oldVal && oldVal.settlements && isLoadingHistory.value === false) {
@@ -1135,7 +1190,9 @@
                     grandTotalSummary, markSettled, copyGrandTotalImage, isExporting,
                     exportingRow, copyRowImage, activeReceipt,
                     toastMsg, confirmModal, closeConfirm, flashGrandTotal,
-                    isAdminUser, showAdminModal, newWhitelistEmail, whitelistEmails, isManagingWhitelist, openAdminModal, addWhitelist, removeWhitelist, filterStartMonth, filterEndMonth
+                    isAdminUser, showAdminModal, newWhitelistEmail, whitelistEmails, isManagingWhitelist,
+                    openAdminModal, addWhitelist, removeWhitelist, filterStartMonth, filterEndMonth,
+                    displayLimit, loadMore, hasMore
                 };
             }
         }).mount('#app');

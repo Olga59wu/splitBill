@@ -121,6 +121,17 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     const inviteId = urlParams.get('invite');
 
+                    /**
+                     * 登入閘道與網址路由控制 (Auth Gateway)
+                     * 
+                     * 負責攔截登入狀態並控制 SPA 前端路由機制。
+                     * 執行流程控制：
+                     * 1. 權限校驗：比對系統白名單 (Firebase Collection: `whitelist`) 及最高管理員硬編碼 (Admin Emails)。
+                     * 2. 邀請碼捕捉：若 URL 夾帶 `?invite={id}` 且通過權限校驗，自動提權重導向至該活動結算頁。
+                     * 3. 非同步阻斷：若權限不符，立即清空 Token (`signOut`) 並強制中斷路由跳轉。
+                     * 
+                     * @param {Object|null} user - Firebase Auth 回傳之使用者物件。
+                     */
                     onAuthStateChanged(auth, async (user) => {
                         if (user) {
                             let hasAccess = false;

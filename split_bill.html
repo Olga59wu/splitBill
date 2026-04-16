@@ -121,31 +121,51 @@
             class="fixed inset-0 z-[105] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
             @click.self="closeRateModal">
             <div
-                class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 w-full max-w-sm border border-slate-100 dark:border-slate-800">
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">外幣匯率設定</h3>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">系統會以台幣(TWD)為基準自動乘算。請輸入目前的匯率即可。</p>
-                <div class="space-y-3 mb-6">
+                class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-6 md:p-8 w-full max-w-sm border border-slate-100 dark:border-slate-800 relative">
+
+                <button @click="closeRateModal"
+                    class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                    ✕
+                </button>
+
+                <h3 class="text-xl font-extrabold text-slate-900 dark:text-white mb-2">外幣匯率設定</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-6 font-medium leading-relaxed">
+                    系統會以台幣 (TWD) 為基準自動乘算。系統每日自動拉取一次，您也可手動修改或同步。
+                </p>
+
+                <div class="space-y-3 mb-8">
                     <div v-for="(rate, cur) in eventRates" :key="'cfg_'+cur" class="flex items-center gap-3">
-                        <span class="w-12 font-bold text-slate-700 dark:text-slate-300">{{cur}}</span>
+                        <span
+                            class="w-12 font-bold text-slate-700 dark:text-slate-300 text-lg tracking-wide">{{cur}}</span>
+
                         <input v-if="cur !== 'TWD'" v-model.number="eventRates[cur]" type="number" step="0.001"
-                            class="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white dark:bg-slate-800" />
-                        <span v-else
-                            class="flex-1 px-3 py-2 text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900 rounded-lg">1.000
-                            (母幣基準)</span>
+                            class="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-emerald-500 dark:text-white font-bold transition-all" />
+
+                        <div v-else
+                            class="flex-1 px-4 py-2.5 text-slate-400 dark:text-slate-500 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50 rounded-xl font-bold flex items-center justify-between">
+                            <span>1.000</span>
+                            <span class="text-xs uppercase tracking-widest opacity-60">母幣基準</span>
+                        </div>
                     </div>
                 </div>
-                <div class="flex gap-3 justify-end items-center mt-6">
+
+                <div class="flex gap-3 justify-end items-center">
                     <button @click="fetchLatestRates(true)" :disabled="isFetchingRates"
-                        class="px-4 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white dark:text-slate-400 disabled:opacity-50 transition-colors flex items-center gap-1">
+                        class="flex-1 py-3 text-sm font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm flex justify-center items-center gap-1.5 disabled:opacity-50">
                         <span v-if="isFetchingRates" class="animate-spin inline-block">⏳</span>
                         <span v-else>🔄</span>
-                        同步匯率
+                        同步最新
                     </button>
+
                     <button @click="closeRateModal"
-                        class="px-5 py-2.5 text-sm font-bold text-white bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 rounded-xl transition-all">套用儲存</button>
+                        class="flex-1 py-3 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl shadow-md transition-all active:scale-[0.98]">
+                        完成套用
+                    </button>
                 </div>
-                <p v-if="ratesLastUpdatedAt" class="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-4">
-                    ⚠️ 匯率約每日更新一次<br />最後更新: {{ ratesLastUpdatedAt }}
+
+                <p v-if="ratesLastUpdatedAt"
+                    class="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-5 font-semibold tracking-wider">
+                    最後更新時間: {{ ratesLastUpdatedAt }}
                 </p>
             </div>
         </div>
@@ -194,9 +214,12 @@
                     </div>
                     <div class="flex items-center gap-2 w-full md:w-auto">
                         <select v-model="selectedIdentity"
-                            class="flex-1 md:w-40 bg-indigo-900 border border-indigo-500 rounded px-3 py-1.5 text-sm font-bold outline-none focus:ring-2 focus:ring-white">
-                            <option value="" disabled>請選擇您的名字</option>
-                            <option v-for="p in persons" :key="'claim'+p.id" :value="p.id">{{ p.name }}</option>
+                            class="flex-1 md:w-40 bg-indigo-900 border border-indigo-500 rounded px-3 py-1.5 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-white cursor-pointer">
+                            <option value="" disabled class="bg-indigo-900 text-indigo-300">請選擇您的名字</option>
+                            <option v-for="p in unclaimedPersons" :key="'claim'+p.id" :value="p.id"
+                                class="bg-indigo-900 text-white">
+                                {{ p.name }}
+                            </option>
                         </select>
                         <button @click="claimIdentity" :disabled="!selectedIdentity || isClaiming"
                             class="bg-white text-indigo-700 hover:bg-emerald-50 px-4 py-1.5 rounded text-sm font-bold shadow-sm transition-all whitespace-nowrap disabled:opacity-50">
@@ -215,28 +238,36 @@
                             class="font-extrabold text-slate-900 dark:text-white text-lg md:text-xl tracking-tight hidden md:flex items-center gap-2">
                             <span>💳</span> 分帳小幫手
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex gap-1.5 sm:gap-2 items-center">
                             <button v-if="isViewMode && !isReadOnly" @click="isViewMode = false"
-                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-900 transition-colors shadow-sm flex items-center gap-1.5">
-                                <span>✏️</span><span class="hidden sm:inline">進入編輯</span>
+                                class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition-all shadow-sm flex items-center gap-1.5">
+                                <span>✏️</span><span class="hidden sm:inline">編輯</span>
                             </button>
-
                             <button v-else-if="!isViewMode && editEventId && !isReadOnly"
                                 @click="isViewMode = true; cancelEditExpense()"
-                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-colors shadow-md flex items-center gap-1.5">
-                                <span>✅</span><span class="hidden sm:inline">完成編輯</span>
+                                class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-all shadow-sm flex items-center gap-1.5 border border-transparent">
+                                <span>✅</span><span class="hidden sm:inline">完成</span>
                             </button>
 
-                            <div v-else-if="!editEventId && !isReadOnly"
-                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-semibold bg-slate-900 dark:bg-slate-700 text-white shadow-md">
-                                新增活動
-                            </div>
                             <button v-if="editEventId" @click="copyInviteLink"
-                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-bold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900 transition-colors shadow-sm flex items-center gap-1.5">
+                                class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:bg-slate-800 dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/30 transition-all shadow-sm flex items-center gap-1.5">
                                 <span>🔗</span><span class="hidden sm:inline">分享</span>
                             </button>
+
+                            <a v-if="editEventId && !isReadOnly" href="./split_bill.html"
+                                class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition-all shadow-sm flex items-center gap-1.5">
+                                <span>➕</span><span class="hidden sm:inline">新增</span>
+                            </a>
+
+                            <div v-else-if="!editEventId && !isReadOnly"
+                                class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold bg-slate-50 text-slate-400 dark:bg-slate-800/50 dark:text-slate-500 border border-slate-200 dark:border-slate-800 flex items-center">
+                                新增活動
+                            </div>
+
                             <a href="./history.html"
-                                class="px-3 md:px-4 py-2 rounded-lg text-sm font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 relative z-10 block transition-colors">歷史總覽</a>
+                                class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-all flex items-center">
+                                歷史總覽
+                            </a>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -867,7 +898,7 @@
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-        import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+        import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
         const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 
@@ -887,7 +918,7 @@
                 const eventTitle = ref('');
                 const persons = ref([]);
                 const myPreferredName = ref('我');
-                const recentContacts = ref([]);
+                const smartContacts = ref({});
 
                 // ==========================================
                 // 3. 【記帳明細管理 (Expenses Tracking)】
@@ -927,8 +958,60 @@
                         isRateManuallyUpdated.value = true;
                     }
                 });
+                /**
+                 * 提取雲端通訊錄 (Fetch Smart Contacts)
+                 * 
+                 * 自 Firebase `/users/{userId}/private/contacts` 節點讀取關聯之聯絡人清單，
+                 * 作為後續指派結算任務與自動關聯 UID 之基礎字典。
+                 * 
+                 * @returns {Promise<void>} 異步執行，無回傳值，狀態寫入 `smartContacts` 響應式物件。
+                 */
+                const fetchSmartContacts = async () => {
+                    if (!currentUser.value || !db) return;
+                    try {
+                        const docRef = doc(db, 'users', currentUser.value.uid, 'private', 'contacts');
+                        const snap = await getDoc(docRef);
+                        if (snap.exists()) {
+                            smartContacts.value = snap.data().list || {};
+                        }
+                    } catch (e) {
+                        console.error("無法載入雲端通訊錄", e);
+                    }
+                };
+                /**
+                 * 請求即時匯率 (Fetch Latest Rates)
+                 * 
+                 * 呼叫開源匯率 API 取得多國貨幣相對於基準幣別 (TWD) 的即時匯率基準。
+                 * 實作本地端快取 (LocalStorage) 機制，若同日背景預熱已成功則直接命中快取以節省頻寬。
+                 * 
+                 * @param {boolean} isManual - 判定是否為使用者手動觸發，若為真則強制覆蓋快取並觸發狀態通知。
+                 * @returns {Promise<void>} 異步執行，狀態寫入 `eventRates`。
+                 */
+                const fetchLatestRates = async (isManual = false) => {
+                    // 1. 取得今天的日期字串 (例如 "2026/4/16")
+                    const todayStr = new Date().toLocaleDateString('zh-TW');
+                    const cacheKey = 'splitBill_rates_cache';
 
-                const fetchLatestRates = async (showFeedbackToast = false) => {
+                    // 2. 如果是「自動載入」，先檢查快取
+                    if (!isManual) {
+                        try {
+                            const cachedData = JSON.parse(localStorage.getItem(cacheKey));
+                            // 如果快取的日期就是今天，直接套用，不請求 API！
+                            if (cachedData && cachedData.date === todayStr && cachedData.rates) {
+                                Object.keys(cachedData.rates).forEach(cur => {
+                                    if (eventRates.value[cur] !== undefined) {
+                                        eventRates.value[cur] = cachedData.rates[cur];
+                                    }
+                                });
+                                if (cachedData.timestamp) ratesLastUpdatedAt.value = cachedData.timestamp;
+                                if (editEventId.value) syncStateToCloud();
+                                console.log("✅ 已載入今日匯率快取，跳過 API 請求。");
+                                return; // 提早結束，不往下執行
+                            }
+                        } catch (e) { /* 快取解析失敗就略過，繼續打 API */ }
+                    }
+
+                    // 3. 如果是手動點擊，或是今天還沒打過 API，才執行以下請求
                     isFetchingRates.value = true;
                     try {
                         const curKeys = Object.keys(eventRates.value).filter(k => k !== 'TWD');
@@ -941,15 +1024,27 @@
                                     eventRates.value[cur] = parseFloat((1 / data.rates[cur]).toFixed(4));
                                 }
                             });
+
+                            let timestampStr = '';
                             if (data.time_last_update_utc) {
                                 const d = new Date(data.time_last_update_utc);
-                                ratesLastUpdatedAt.value = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                timestampStr = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                ratesLastUpdatedAt.value = timestampStr;
                             }
-                            showToast('🔄 已成功同步全球最新即時匯率！');
+
+                            // 匯率拉取成功，將資料寫入本地快取 (LocalStorage)
+                            localStorage.setItem(cacheKey, JSON.stringify({
+                                date: todayStr,
+                                rates: eventRates.value,
+                                timestamp: timestampStr
+                            }));
+
+                            // 只有「手動點擊」才跳出綠色成功通知，自動背景載入時保持安靜
+                            if (isManual) showToast('🔄 已成功同步全球最新即時匯率！');
                             if (editEventId.value) syncStateToCloud();
                         }
                     } catch (e) {
-                        if (showFeedbackToast) showToast('無法取得最新匯率，請檢查網路連線或稍後再試。');
+                        if (isManual) showToast('無法取得最新匯率，請檢查網路連線或稍後再試。');
                     } finally {
                         isFetchingRates.value = false;
                     }
@@ -966,8 +1061,17 @@
 
                 // ==========================================
                 // 5. 【雲端同步與保存 (Firebase Sync & Save)】
-                // 處理表單的自動草稿紀錄以及正式發布到資料庫的流程。
+                // 處理表單的備份與正式發佈至資料庫之完整生命週期。
                 // ==========================================
+
+                /**
+                 * 同步狀態至雲端 (Sync State to Cloud)
+                 * 
+                 * 攔截使用者觸發之狀態變更，將活動主題、參與人員、明細清單與稽核日誌 (Audit Logs)
+                 * 封裝為 Payload，並透過 Firestore UpdateDoc 執行無縫更新，確保多端狀態一致。
+                 * 
+                 * @returns {Promise<void>} 若處於唯讀狀態 (isReadOnly) 則自動阻斷寫入。
+                 */
                 const syncStateToCloud = async () => {
                     if (!editEventId.value || !db || isReadOnly.value) return;
                     isSaving.value = true;
@@ -997,6 +1101,15 @@
                 // 6. 【即時訂閱與權限識別 (Realtime DB Subscription)】
                 // 進入特定活動網址時，監聽該活動的即時更新並確認使用者身分。
                 // ==========================================
+                /**
+                 * 即時訂閱活動 (Subscribe to Event Realtime Updates)
+                 * 
+                 * 採用 Firestore `onSnapshot` 建立 WebSockets 雙向綁定。
+                 * 攔截遠端變更事件並過濾元資料快取 (Metadata Pending Writes)。
+                 * 同時執行協作者比對邏輯，若偵測到未知之涉入者 UID，自動提權寫入個人通訊錄。
+                 * 
+                 * @param {string} id - 目標活動之文檔識別碼 (Document ID)
+                 */
                 const subscribeToEvent = (id) => {
                     onSnapshot(doc(db, 'events', id), (snap) => {
                         if (!snap.exists()) return;
@@ -1015,6 +1128,28 @@
                         if (persons.value.length > 0) personIdCounter = Math.max(...persons.value.map(p => p.id)) + 1;
                         if (expenses.value.length > 0) expenseIdCounter = Math.max(...expenses.value.map(e => e.id)) + 1;
 
+                        // 更新：解析歷史紀錄並自動建檔聯絡人 UID
+                        if (currentUser.value && !isReadOnly.value && d.persons) {
+                            let hasNewFriend = false;
+                            const currentList = { ...smartContacts.value };
+
+                            d.persons.forEach(p => {
+                                // 如果這個人有 UID，且不是你自己，且你的通訊錄還沒記住他
+                                if (p.uid && p.uid !== currentUser.value.uid && currentList[p.name] !== p.uid) {
+                                    currentList[p.name] = p.uid;
+                                    hasNewFriend = true;
+                                }
+                            });
+
+                            // 如果發現新朋友，立刻同步回你的雲端通訊錄
+                            if (hasNewFriend) {
+                                smartContacts.value = currentList;
+                                const docRef = doc(db, 'users', currentUser.value.uid, 'private', 'contacts');
+                                setDoc(docRef, { list: currentList }, { merge: true })
+                                    .then(() => console.log("✅ 已自動從舊活動中同步聯絡人至雲端"))
+                                    .catch(e => console.error("同步通訊錄失敗", e));
+                            }
+                        }
                         nextTick(() => { if (showChart.value) updateChartDraw(); });
                         if (isRemote) {
                             showToast('⚡ 遠端資料即時連動更新！');
@@ -1034,19 +1169,37 @@
                     return editEventId.value && currentUser.value && ownerUid.value !== currentUser.value.uid && (!collaboratorUids.value || !collaboratorUids.value.includes(currentUser.value.uid));
                 });
                 const isReadOnly = computed(() => isVisitor.value);
-
+                // 【新增】過濾出還沒有被認領的身分
+                const unclaimedPersons = computed(() => {
+                    // 只回傳那些 uid 為空（或是 null/undefined）的人
+                    return persons.value.filter(p => !p.uid);
+                });
                 const selectedIdentity = ref("");
                 const isClaiming = ref(false);
 
+                /**
+                 * 身分認領與權限核發 (Identity Claim)
+                 * 
+                 * 允許唯讀訪客主動認領活動名單內尚未綁定之名義 (Null UID Entity)。
+                 * 執行安全性寫入：同時將訪客之實際 UID 寫入 `persons` 陣列與 `collaboratorUids` 權限集合。
+                 * 確保後續存取時解除訪客受限模式 (Guest View)。
+                 * 
+                 * @returns {Promise<void>} 異步執行，具備狀態鎖 (isClaiming) 防護二次提交。
+                 */
                 const claimIdentity = async () => {
                     if (!selectedIdentity.value || !editEventId.value || !db) return;
                     isClaiming.value = true;
                     try {
-                        const p = persons.value.find(x => x.id === selectedIdentity.value);
+                        // 綁定他的 UID 到名單上
+                        // 強制將選單傳來的字串轉為數字，這樣 2 才會等於 2
+                        const pIndex = persons.value.findIndex(x => x.id === Number(selectedIdentity.value));
+                        if (pIndex > -1) persons.value[pIndex].uid = currentUser.value.uid;
+
                         await updateDoc(doc(db, 'events', editEventId.value), {
-                            collaboratorUids: arrayUnion(currentUser.value.uid)
+                            collaboratorUids: arrayUnion(currentUser.value.uid),
+                            persons: persons.value // 同步把綁好 UID 的名單更新上雲端
                         });
-                        showToast(`🎉 歡迎加入！已確認您為 ${p.name}。專案已存入歷史紀錄。`);
+                        showToast(`🎉 歡迎加入！已確認您為 ${persons.value[pIndex].name}。專案已存入歷史紀錄。`);
                     } catch (e) {
                         showToast('身份綁定失敗，請確認 Firebase Rules 權限設定。');
                     } finally {
@@ -1087,7 +1240,7 @@
                     calcInput.value = newExpense.value.amount ? String(newExpense.value.amount) : '';
                     showCalculator.value = true;
                 };
-                // 【防呆 1】即時過濾：只允許數字、小數點與四則運算符號
+                // 【防護防呆 1】即時過濾：只允許數字、小數點與四則運算符號
                 const handleAmountInput = (e) => {
                     // 將輸入值替換掉所有非數字、非小數點、非運算符號的字元 (包含中文、英文、全形符號)
                     let val = String(e.target.value).replace(/[^0-9+\-*/.]/g, '');
@@ -1098,7 +1251,7 @@
                     newExpense.value.amount = val;
                 };
 
-                // 【防呆 2】離開焦點時：自動計算算式結果並阻擋負數
+                // 【防護防呆 2】離開焦點時：自動計算算式結果並阻擋負數
                 const handleAmountBlur = () => {
                     if (!newExpense.value.amount) return;
                     try {
@@ -1177,7 +1330,6 @@
                 });
                 // Initializer
                 onMounted(() => {
-                    try { recentContacts.value = JSON.parse(localStorage.getItem('splitBillContacts')) || []; } catch (e) { }
                     if (!auth) return;
 
                     onAuthStateChanged(auth, async (user) => {
@@ -1203,7 +1355,7 @@
 
                         currentUser.value = user;
                         isCheckingAuth.value = false;
-
+                        fetchSmartContacts(); // 登入後立刻抓取雲端通訊錄
                         const urlParams = new URLSearchParams(window.location.search);
                         const viewId = urlParams.get('view');
 
@@ -1234,7 +1386,8 @@
                             let sn = localStorage.getItem('mySplitBillName');
                             if (!sn) { sn = user.displayName || '我'; localStorage.setItem('mySplitBillName', sn); }
                             myPreferredName.value = sn;
-                            persons.value = [{ id: 1, name: sn }];
+                            // 綁定建立者 UID，防止發起人列入預覽認領清單
+                            persons.value = [{ id: 1, name: sn, uid: user.uid }];
                             personIdCounter = 2;
                             newExpense.value.involvedPersonIds = [1];
                             fetchLatestRates(false); // 讓開新活動時自動抓最新匯率
@@ -1259,7 +1412,7 @@
 
                 const filteredContacts = computed(() => {
                     let ex = persons.value.map(p => p.name.toLowerCase());
-                    let f = recentContacts.value.filter(c => !ex.includes(c.toLowerCase()));
+                    let f = Object.keys(smartContacts.value).filter(c => !ex.includes(c.toLowerCase()));
                     if (newPersonName.value) f = f.filter(c => c.toLowerCase().includes(newPersonName.value.toLowerCase()));
                     return f.slice(0, 10);
                 });
@@ -1268,15 +1421,25 @@
                     let n = newPersonName.value.trim();
                     if (!n || persons.value.some(p => p.name === n)) return;
                     const newId = personIdCounter++;
-                    persons.value.push({ id: newId, name: n });
+
+                    // 自雲端通訊錄讀取對應之 UID (若存在)
+                    const knownUid = smartContacts.value[n] || null;
+                    persons.value.push({ id: newId, name: n, uid: knownUid });
+
                     newPersonName.value = '';
 
                     if (!newExpense.value.involvedPersonIds.includes(newId)) {
                         newExpense.value.involvedPersonIds.push(newId);
                     }
 
-                    let contacts = Array.from(new Set([n, ...recentContacts.value])).slice(0, 30);
-                    recentContacts.value = contacts; localStorage.setItem('splitBillContacts', JSON.stringify(contacts));
+                    // 把新名字加進通訊錄 (即使還沒有 UID，也先記名字，方便下次點擊)
+                    if (smartContacts.value[n] === undefined) {
+                        smartContacts.value[n] = knownUid;
+                        if (currentUser.value && !isReadOnly.value) {
+                            const docRef = doc(db, 'users', currentUser.value.uid, 'private', 'contacts');
+                            setDoc(docRef, { list: smartContacts.value }, { merge: true }).catch(() => { });
+                        }
+                    }
 
                     addSystemLog(`${myPreferredName.value} 加入了分攤夥伴: ${n}`);
                 };
@@ -1359,7 +1522,7 @@
                     editingExpenseId.value = e.id;
                     newExpense.value = JSON.parse(JSON.stringify(e));
 
-                    // 【新增】向後相容防呆：處理舊版資料沒有 splitMode 等新欄位的情況
+                    // 【新增】向後相容防護防呆：處理舊版資料沒有 splitMode 等新欄位的情況
                     if (!newExpense.value.splitMode) {
                         // 如果舊資料有填寫絕對金額，就判定為「指定金額」，否則預設為「均攤」
                         if (newExpense.value.fractionalAmounts && Object.keys(newExpense.value.fractionalAmounts).length > 0) {
@@ -1414,7 +1577,7 @@
                         return true;
                     }
 
-                    // 情境 2：防呆操作 (勾選了多人，但在「指定金額」中，某個非墊付者承擔了 100% 的總金額)
+                    // 情境 2：防護防呆操作 (勾選了多人，但在「指定金額」中，某個非墊付者承擔了 100% 的總金額)
                     if (exp.fractionalAmounts) {
                         const keys = Object.keys(exp.fractionalAmounts);
                         // 如果只有一個人被指定了金額
@@ -1439,8 +1602,21 @@
                 });
 
                 // ==========================================
-                // 8. 【結算結果輸出】
+                // 8. 【結算演算法模型 (Settlement Engine)】
+                // 分析所有明細，消弭雙向欠款並濃縮出最精簡的「誰該匯給誰多少錢」。
                 // ==========================================
+
+                /**
+                 * 最佳化結算路徑計算 (Grand Debt Simplification)
+                 * 
+                 * 採用 O(N) 一維矩陣攤平與 O(N^2) 網狀結算雙通道演算法：
+                 * 1. 建立 Pairwise 債務矩陣 (`pairwise[debtor][creditor]`)。
+                 * 2. 依照「指定金額 (Exact)」優先抵扣，剩餘總額 (`dynTotal`) 交由「均攤 (Equal)」與「份數 (Shares)」邏輯分配。
+                 * 3. 執行雙向互抵 (Netting)：若 A 欠 B 100，B 欠 A 40，則抵銷為 A 欠 B 60，最小化轉帳手續費與實體交易頻率。
+                 * 4. 於迭代末端結合 `Math.round()` 來修補 JavaScript IEEE 754 浮點數精度缺陷（如：0.01 捨入誤差）。
+                 * 
+                 * @returns {Array} 排序後之最佳化轉帳路徑陣列 `[{ from, to, amount }]`
+                 */
                 const settlements = computed(() => {
                     const pairwise = {};
                     const addDebt = (debtor, creditor, amt) => {
@@ -1599,13 +1775,21 @@
                         } else {
                             payload.createdAt = serverTimestamp();
                             payload.ownerUid = currentUser.value.uid;
-                            payload.collaboratorUids = [currentUser.value.uid];
                             payload.isArchived = false;
+
+                            // 無縫連動：收集名單中已驗證協作者之 UID 並預先授權
+                            const uids = [currentUser.value.uid];
+                            persons.value.forEach(p => {
+                                if (p.uid && !uids.includes(p.uid)) {
+                                    uids.push(p.uid);
+                                }
+                            });
+                            payload.collaboratorUids = uids;
 
                             // 1. 取得建立後的雲端文件 ID
                             const docRef = await addDoc(collection(db, 'events'), payload);
 
-                            // 2. 🌟 關鍵優化：直接將狀態切換為「已建立 (編輯模式)」，不要清空畫面
+                            // 效能最佳化：直接將狀態切換為編輯模式，保留當前渲染狀態
                             editEventId.value = docRef.id;
 
                             // 3. 悄悄更新瀏覽器的網址列 (加上 ?id=...)，這樣使用者按重新整理才不會跳回空白頁
@@ -1645,7 +1829,7 @@
                     isVisitor, selectedIdentity, isClaiming, claimIdentity, showCalculator, calcInput, openCalculator,
                     closeCalculator, appendCalc, calcEvaluate, currentCalculatedTotal, editingSnapshotRate, isRateManuallyUpdated, activeExchangeRate,
                     selectAllInvolved, deselectAllInvolved, remainingExactAmount, exactModeError, isDirectTransfer,
-                    handleAmountInput, handleAmountBlur, isViewMode, editEventId, copyInviteLink
+                    handleAmountInput, handleAmountBlur, isViewMode, editEventId, copyInviteLink, unclaimedPersons
                 };
             }
         }).mount('#app');
